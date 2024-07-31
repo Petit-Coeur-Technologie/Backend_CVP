@@ -53,7 +53,10 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 def get_user_by_email(db: Session, email: str):
     return db.query(Utilisateurs).filter(Utilisateurs.email == email).first()
 
-def get_user_by_nom(db: Session, nom_prenom: str):
+def get_pme_by_email(db: Session, email: str):
+    return db.query(Utilisateurs).filter(Utilisateurs.email == email).first()
+
+def get_pme_by_nom(db: Session, nom_prenom: str):
     return db.query(Utilisateurs).filter(Utilisateurs.nom_prenom == nom_prenom).first()
 
 def authenticate_user(db: Session, identifier: str, password: str):
@@ -88,12 +91,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         raise credentials_exception
     return user
 
-# Endpoint pour l'enregistrement
-@app.post("/register", response_model=Utilisateur)
-def register(user: UtilisateurCreate, db: Session = Depends(get_db)):
-    db_user = get_user_by_email(db, email=user.email)
+@app.post("/register", response_model=Pme)
+def register_pme(user: pmeCreate, db: Session = Depends(get_db)):
+    db_user = get_pme_by_email(db, email=user.email)
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Email deja existant")
     hashed_password = get_password_hash(user.mot_de_passe)
     db_user = Utilisateurs(
         nom_prenom=user.nom_prenom,
@@ -106,9 +108,47 @@ def register(user: UtilisateurCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     return db_user
+# Endpoint pour l'enregistrement
+@app.post("/Inscription_client", response_model=Client)
+def inscription_client(user: ClientCreateBase, db: Session = Depends(get_db)):
+    db_user = get_client_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email deja existant")
+
+    hashed_password = get_password_hash(user.mot_de_passe)
+
+    if user.type_client == "menage":
+        db_user = ClientModel(
+            nom_prenom=user.nom_prenom,
+            email=user.email,
+            mot_de_passe=hashed_password,
+            tel=user.tel,
+            genre=user.genre,
+            type_client=user.type_client,
+            pi_client=user.pi_client
+        )
+    elif user.type_client == "entreprise":
+        db_user = ClientModel(
+            nom_prenom=user.nom_prenom,
+            email=user.email,
+            mot_de_passe=hashed_password,
+            tel=user.tel,
+            genre=user.genre,
+            type_client=user.type_client,
+            pi_client=user.pi_client,
+            num_rccm=user.num_rccm,
+            nom_entreprise=user.nom_entreprise
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Type de client invalide")
+
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
 # Endpoint pour la connexion
-@app.post("/token", response_model=Token)
+@app.post("/login", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # Authentification de l'utilisateur soit par email, soit par nom
     user = authenticate_user(db, identifier=form_data.username, password=form_data.password)
@@ -130,6 +170,3 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def read_users_me(current_user: Utilisateur = Depends(get_current_user)):
     return current_user
 
-# Commande pour exécuter l'application
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
