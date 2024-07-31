@@ -9,9 +9,13 @@ class UtilisateurBase(BaseModel):
 
 class UtilisateurCreate(UtilisateurBase):
     mot_de_passe: str
+    quartier_id: int
 
 class Utilisateur(UtilisateurBase):
     id: int
+    quartier_id: int  
+    pmes: List['Pme'] = []
+    clients: List['Client'] = []
 
     class Config:
         orm_mode = True
@@ -32,17 +36,32 @@ class Pme(PmeBase):
     class Config:
         orm_mode = True
 
-class ClientBase(BaseModel):
-    type_client: bool
-    num_rccm: str
-    nom_entreprise: str
+class ClientCreateBase(BaseModel):
+    email: str
+    tel: str
+    genre: bool
     pi_client: str
 
-class ClientCreate(ClientBase):
-    utilisateur_id: int
 
-class Client(ClientBase):
+class MenageCreate(ClientCreateBase):
+    nom_prenom: str
+    type_client: str = Field(default="menage")
+
+
+class EntrepriseCreate(ClientCreateBase):
+    nom_prenom: str
+    num_rccm: str
+    nom_entreprise: str
+    type_client: str = Field(default="entreprise")
+
+
+class Client(BaseModel):
     id: int
+    nom_prenom: str
+    email: str
+    tel: str
+    genre: bool
+    type_client: str
 
     class Config:
         orm_mode = True
