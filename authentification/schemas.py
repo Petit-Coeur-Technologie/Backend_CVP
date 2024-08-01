@@ -1,75 +1,160 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import date, time
 
-class UtilisateurBase(BaseModel):
+class UtilisateurCreate(BaseModel):
+    quartier_id: Optional[int]
     nom_prenom: str
     email: str
     tel: str
     genre: bool
-
-class UtilisateurCreate(UtilisateurBase):
+    copie_PI: str
+    role: str
     mot_de_passe: str
-    quartier_id: int
 
-class Utilisateur(UtilisateurBase):
+class Utilisateur(BaseModel):
     id: int
-    quartier_id: int  
-    pmes: List['Pme'] = []
-    clients: List['Client'] = []
+    quartier_id: Optional[int]
+    nom_prenom: str
+    email: str
+    tel: str
+    genre: bool
+    copie_PI: str
+    role: str
 
     class Config:
-        orm_mode = True
+        orm_mode: True
 
-class PmeBase(BaseModel):
+
+
+class PmeCreate(BaseModel):
     nom_pme: str
     description: str
     zone_intervention: str
-    logo: str
-    pi_rep: str
+    logo_pme: str
 
-class PmeCreate(PmeBase):
+class Pme(BaseModel):
+    id: int
+    nom_pme: str
+    description: str
+    zone_intervention: str
+    logo_pme: str
     utilisateur_id: int
 
-class Pme(PmeBase):
-    id: int
-
     class Config:
-        orm_mode = True
-
-class ClientCreateBase(BaseModel):
-    email: str
-    tel: str
-    genre: bool
-    pi_client: str
+        orm_mode: True
 
 
-class MenageCreate(ClientCreateBase):
-    nom_prenom: str
-    type_client: str = Field(default="menage")
 
-
-class EntrepriseCreate(ClientCreateBase):
-    nom_prenom: str
+class ClientCreate(BaseModel):
+    type_client: bool
     num_rccm: str
     nom_entreprise: str
-    type_client: str = Field(default="entreprise")
-
+    photo_profil: str
 
 class Client(BaseModel):
     id: int
-    nom_prenom: str
-    email: str
-    tel: str
-    genre: bool
-    type_client: str
+    type_client: bool
+    num_rccm: str
+    nom_entreprise: str
+    photo_profil: str
+    utilisateur_id: int
 
     class Config:
-        orm_mode = True
+        orm_mode: True
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
 
-class TokenData(BaseModel):
-    nom_prenom: Optional[str] = None
-    email: Optional[str] = None
+
+class VilleCreate(BaseModel):
+    nom: str
+
+class Ville(BaseModel):
+    id: int
+    nom: str
+
+    class Config:
+        orm_mode: True
+
+
+
+class CommuneCreate(BaseModel):
+    nom: str
+    ville_id: int
+
+class Commune(BaseModel):
+    id: int
+    nom: str
+    ville_id: int
+
+    class Config:
+        orm_mode: True
+
+
+
+class QuartierCreate(BaseModel):
+    nom: str
+    commune_id: int
+
+class Quartier(BaseModel):
+    id: int
+    nom: str
+    commune_id: int
+
+    class Config:
+        orm_mode: True
+
+
+
+class AbonnementCreate(BaseModel):
+    num_abonnement: str
+    montant_abonnement: int
+    debut_abonnement: date
+    fin_abonnement: date
+    status_abonnement: bool
+
+class Abonnement(BaseModel):
+    id: int
+    num_abonnement: str
+    montant_abonnement: int
+    debut_abonnement: date
+    fin_abonnement: date
+    status_abonnement: bool
+    pme_id: int
+    client_id: int
+
+    class Config:
+        orm_mode: True
+
+
+
+class CalendrierCreate(BaseModel):
+    jour_passage: date
+    heure_passage: time
+    creation: date
+    mise_a_jour: date
+
+class Calendrier(BaseModel):
+    id: int
+    jour_passage: date
+    heure_passage: time
+    creation: date
+    mise_a_jour: date
+    pme_id: int
+
+    class Config:
+        orm_mode: True
+
+
+
+class ConfPassageCreate(BaseModel):
+    date_confirmation: date
+    confirmation: str
+
+class ConfPassage(BaseModel):
+    id: int
+    date_confirmation: date
+    confirmation: str
+    calendrier_id: int
+
+    class Config:
+        orm_mode: True
