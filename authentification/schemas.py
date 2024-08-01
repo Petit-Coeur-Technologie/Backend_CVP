@@ -7,7 +7,7 @@ class UtilisateurCreate(BaseModel):
     nom_prenom: str
     email: str
     tel: str
-    genre: bool
+    genre: str
     copie_PI: str
     role: str
     mot_de_passe: str
@@ -26,7 +26,7 @@ class PmeCreate(BaseModel):
 
 class ClientCreate(BaseModel):
     id: int
-    type_client: bool
+    type_client: str
     num_rccm: str
     nom_entreprise: str
     photo_profil: str
