@@ -131,7 +131,14 @@ class Utilisateurs(Base):
         String,
         nullalbe=False
     )
-
+    create_at = Column(
+        DateTime,
+        nullable=False
+    )
+    update_at = Column(
+        DateTime,
+        nullable=False
+    )
     
     pme = relationship(
         "Pme",
