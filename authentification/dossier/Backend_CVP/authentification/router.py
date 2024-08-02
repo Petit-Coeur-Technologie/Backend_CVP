@@ -54,12 +54,9 @@ def get_user_by_email(db: Session, email: str):
     return db.query(Utilisateurs).filter(Utilisateurs.email == email).first()
 
 def get_pme_by_email(db: Session, email: str):
-    return db.query(Pme).filter(Pme.email == email).first()
+    return db.query(Utilisateurs).filter(Utilisateurs.email == email).first()
 
 def get_pme_by_nom(db: Session, nom_prenom: str):
-    return db.query(Pme).filter(Pme.nom_prenom == nom_prenom).first()
-
-def get_user_by_nom(db: Session, nom_prenom: str):
     return db.query(Utilisateurs).filter(Utilisateurs.nom_prenom == nom_prenom).first()
 
 def authenticate_user(db: Session, identifier: str, password: str):
