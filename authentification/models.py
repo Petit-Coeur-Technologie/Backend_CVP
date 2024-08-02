@@ -15,6 +15,8 @@ class Utilisateur(Base):
     genre = Column(Boolean, nullable=False, default=True)
     copie_PI = Column(String, nullable=False)
     role = Column(String, nullable=False)
+    is_actif = Column(Boolean, server_default=False, nullable=False)
+    date_creation = Column(TIMESTAMP(timezone=True), nullable=False, server_default=Text('now()'))
 
 class Pme(Base):
     __tablename__ = "Pme"
@@ -24,6 +26,7 @@ class Pme(Base):
     zone_intervention = Column(String, nullable=False)
     logo_pme = Column(String, nullable=False)
     utilisateur = relationship('Utilisateur', back_ref='pme')
+    tarif_abonnement = Column(Integer, nullable=False)
 
 class Client(Base):
     __tablename__ = "Client"
@@ -77,3 +80,11 @@ class Conf_Passage(Base):
     calendrier_id = Column(Integer, ForeignKey("Calendrier.id"))
     date_confirmation = Column(Date, nullable=False, index=True)
     confirmation = Column(String, nullable=False, index=True)
+    
+    
+class OTP(Base):
+    __tablename__ = 'otps'
+    id = Column(Integer, primary_key=True, index=True)
+    phone_number = Column(String, unique=True, index=True, nullable=False)
+    otp = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
