@@ -1,8 +1,7 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime, Text
-from Sqlalchemy.orm import relationship
-from sqlalchemy_utils import EmailType, URLType
+from sqlalchemy.orm import relationship
 
-from .database import Base
+from database import Base
 
 
 ##===============================================================##
@@ -75,7 +74,7 @@ class Quartier(Base):
         nullable=False   
     )
     
-    utilisateur = Column(
+    utilisateur = relationship(
         "Utilisateur",
         backref="quartier"
     )
@@ -99,7 +98,8 @@ class Utilisateurs(Base):
     )
     quartier_id = Column(
         Integer,
-        ForeignKey("quartiers.id")    
+        ForeignKey("quartiers.id"),
+        nullable=False
     )
     nom_prenom = Column(
         String,
@@ -108,7 +108,8 @@ class Utilisateurs(Base):
     )
     tel = Column(
         String,
-        unique=True
+        unique=True,
+        nullable=False
     )
     genre = Column(
         String,
@@ -129,10 +130,14 @@ class Utilisateurs(Base):
     )
     role = Column(
         String,
-        nullalbe=False
+        nullable=False
     )
     create_at = Column(
         DateTime,
+        nullable=False
+    )
+    is_actif = Column(
+        Boolean,
         nullable=False
     )
     update_at = Column(
@@ -227,10 +232,6 @@ class Client(Base):
         Integer,
         ForeignKey("utilisateurs.id")
     )
-    type_client = Column(
-        String,
-        nullable=False
-    )
     num_rccm = Column(
         String,
         nullable=False
@@ -239,10 +240,6 @@ class Client(Base):
         String,
         nullable=False,
         index=True
-    )
-    pi_client = Column(
-        String,
-        nullable=False
     )
 
 
@@ -257,6 +254,11 @@ class Client(Base):
 class Abonnement(Base):
     __tablename__ = "abonnement"
     
+    id = Column(
+        Integer,
+        primary_key=True,
+        nullable=False
+    )
     utilisateurs_id = Column(
         Integer,
         ForeignKey("utilisateurs.id")
