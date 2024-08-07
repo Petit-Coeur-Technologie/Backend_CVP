@@ -24,7 +24,7 @@ class Ville(Base):
         nullable=False
     )
     
-    commune = relationship(
+    communes = relationship(
         "Commune",
         backref="ville"
     )
@@ -42,14 +42,15 @@ class Commune(Base):
     )
     ville_id = Column(
         Integer,
-        ForeignKey("villes.id")
+        ForeignKey("villes.id"),
+        nullable=False
     )
     commune = Column(
         String,
         nullable=False
     )
     
-    quartier = relationship(
+    quartiers = relationship(
         "Quartier",
         backref="commune"
     )
@@ -67,14 +68,15 @@ class Quartier(Base):
     )
     commune_id = Column(
         Integer,
-        ForeignKey("communes.id")
+        ForeignKey("communes.id"),
+        nullable=False
     )
     quartier = Column(
         String,
         nullable=False   
     )
     
-    utilisateur = relationship(
+    utilisateurs = relationship(
         "Utilisateur",
         backref="quartier"
     )
@@ -89,7 +91,7 @@ class Quartier(Base):
 #      Table Utilisateur     #
 ##############################
 
-class Utilisateurs(Base):
+class Utilisateur(Base):
     __tablename__ = "utilisateurs"
     id = Column(
         Integer,
@@ -145,21 +147,21 @@ class Utilisateurs(Base):
         nullable=False
     )
     
-    pme = relationship(
+    pmes = relationship(
         "Pme",
         backref="utilisateur"
     )
     
-    client = relationship(
+    clients = relationship(
         "Client",
         backref="utilisateur"
     )
-    abonnement = relationship(
+    abonnements = relationship(
         "Abonnement",
         backref="utilisateur"
     )
-    confcalronde = relationship(
-        "ConfCalROnde",
+    confcalrondes = relationship(
+        "ConfCalRonde",
         backref="utilisateur"
     )
     
@@ -176,7 +178,8 @@ class Pme(Base):
     )
     utilisateur_id = Column(
         Integer,
-        ForeignKey("utilisateurs.id")
+        ForeignKey("utilisateurs.id"),
+        nullable=False
     )
     nom_pme = Column(
         String,
@@ -209,11 +212,11 @@ class Pme(Base):
     )
     
     
-    abonnement = relationship(
+    abonnements = relationship(
         "Abonnement",
         backref="pme"
     )
-    calronde = relationship(
+    calrondes = relationship(
         "CalRonde",
         backref="pme"
     )
@@ -222,7 +225,7 @@ class Pme(Base):
 #        Table Client        #
 ##############################
 class Client(Base):
-    __tablename__ = "Client"
+    __tablename__ = "clients"
     
     id = Column(
         Integer,
@@ -230,7 +233,8 @@ class Client(Base):
     )
     utilisateur_id = Column(
         Integer,
-        ForeignKey("utilisateurs.id")
+        ForeignKey("utilisateurs.id"),
+        nullable=False
     )
     num_rccm = Column(
         String,
@@ -252,7 +256,7 @@ class Client(Base):
 #      Table Abonnement      #
 ##############################
 class Abonnement(Base):
-    __tablename__ = "abonnement"
+    __tablename__ = "abonnements"
     
     id = Column(
         Integer,
@@ -298,7 +302,7 @@ class Abonnement(Base):
 #      Table CalRonde       #
 ##############################
 
-class CalROnde(Base):
+class CalRonde(Base):
     __tablename__ = "calrondes"
     
     id = Column(
@@ -325,9 +329,9 @@ class CalROnde(Base):
         DateTime
     )
     
-    confcalronde = relationship(
-        "ConfCalROnde",
-        backref="calrondes"
+    confcalrondes = relationship(
+        "ConfCalRonde",
+        backref="calronde"
     )
 
 
@@ -336,7 +340,7 @@ class CalROnde(Base):
 ##############################  
 
 class ConfCalRonde(Base):
-    __tablename__ = "confcalronde"
+    __tablename__ = "confcalrondes"
     
     id = Column(
         Integer,
