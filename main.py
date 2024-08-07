@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime
 from typing import Union, Optional
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
 import time
 from sqlalchemy.orm import Session
@@ -40,35 +40,35 @@ def index_root():
     return {"message": "Bienvenue sur l'interface de developpement de conakry ville propre"}
 
 
-@app.get('/villes', response_model=List[schemas.Ville])
+@app.get('/villes', response_model=List[schemas.Ville], tags=["Villes"])
 def get_villes(db: Session = Depends(get_db)):
     
     villes = db.query(Ville).all()
     
     return villes
 
-@app.get('/villes/{id}/communes', response_model=List[schemas.Commune])
+@app.get('/villes/{id}/communes', response_model=List[schemas.Commune], tags=["Villes"])
 def get_com_by_villes(id: int, db: Session = Depends(get_db)):
     
     communes = db.query(Commune).filter(Commune.ville_id==id).all()
     
     return communes
 
-@app.get('/communes', response_model=List[schemas.Commune])
+@app.get('/communes', response_model=List[schemas.Commune], tags=["Communes"])
 def get_communes(db: Session = Depends(get_db)):
     
     communes = db.query(Commune).all()
     
     return communes
 
-@app.get('/communes/{id}/quartiers', response_model=List[schemas.Quartier])
+@app.get('/communes/{id}/quartiers', response_model=List[schemas.Quartier], tags=["Communes"])
 def get_quartiers_by_com(id:int, db: Session = Depends(get_db)):
     
     quartiers = db.query(Quartier).filter(Quartier.commune_id==id).all()
     
     return quartiers
 
-@app.get('/quartiers', response_model=List[schemas.Quartier])
+@app.get('/quartiers', response_model=List[schemas.Quartier], tags=["Quartier"])
 def get_quartiers(db: Session = Depends(get_db)):
     
     quartiers = db.query(Quartier).all()
@@ -77,7 +77,7 @@ def get_quartiers(db: Session = Depends(get_db)):
 
 
 
-@app.post("/pme", response_model=schemas.PmeOut)
+@app.post("/pme", response_model=schemas.PmeOut, tags=["Pme"])
 async def register_pme(
     quartier_id: int = Form(...),
     nom_prenom: str = Form(...),
@@ -99,6 +99,17 @@ async def register_pme(
     db: Session = Depends(get_db)
 ):
     
+    
+    # Vérifier si l'email ou le numéro de téléphone existe déjà
+    existing_user = db.query(Utilisateur).filter(
+        (Utilisateur.email == email) | (Utilisateur.tel == tel)
+    ).first()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="L'email ou le numéro de téléphone existe déjà dans la base de données."
+    )
      
     #hasher le mot de passe
     hashed_password = hash_password(mot_de_passe)
@@ -152,9 +163,44 @@ async def register_pme(
 
     return db_utilisateur
 
+@app.get('/pmes', response_model=List[schemas.PmeOut], tags=['Pme'])
+def get_pmes(db : Session = Depends(get_db)):
+    
+    pmes = db.query(Pme).outerjoin(Utilisateur).all()
 
+    # Transformez les résultats en format approprié
+    pme_list = []
+    for pme in pmes:
+        pme_data = schemas.PmeOut(
+            id=pme.id,
+            utilisateur=schemas.UtilisateurOut(
+                id=pme.utilisateur.id,
+                quartier_id=pme.utilisateur.quartier_id,
+                nom_prenom=pme.utilisateur.nom_prenom,
+                tel=pme.utilisateur.tel,
+                genre=pme.utilisateur.genre,
+                email=pme.utilisateur.email,
+                mot_de_passe=pme.utilisateur.mot_de_passe,
+                copie_pi=pme.utilisateur.copie_pi,
+                role=pme.utilisateur.role,
+                create_at=pme.utilisateur.create_at,
+                is_actif=pme.utilisateur.is_actif,
+                update_at=pme.utilisateur.update_at,
+            ),
+            nom_pme=pme.nom_pme,
+            description=pme.description,
+            zone_intervention=pme.zone_intervention,
+            num_enregistrement=pme.num_enregistrement,
+            tarif_mensuel=pme.tarif_mensuel,
+            tarif_abonnement=pme.tarif_abonnement,
+            logo_pme=pme.logo_pme
+        )
+        pme_list.append(pme_data)
 
-@app.post("/client")
+    return pme_list
+     
+
+@app.post("/client", tags=["Clients"])
 async def create_client(
     role: str = Form(...),
     quartier_id: int = Form(...),
