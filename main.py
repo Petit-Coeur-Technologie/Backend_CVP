@@ -68,12 +68,14 @@ def get_quartiers_by_com(id:int, db: Session = Depends(get_db)):
     
     return quartiers
 
-@app.get('/quartiers', response_model=List[schemas.Quartier], tags=["Quartier"])
-def get_quartiers(db: Session = Depends(get_db)):
+@app.get('/quartiers/{quartier_id}', response_model=schemas.Quartier, tags=["Quartier"])
+def get_quartier(quartier_id: int, db: Session = Depends(get_db)):
+    quartier = db.query(Quartier).filter(Quartier.id == quartier_id).first()
     
-    quartiers = db.query(Quartier).all()
+    if quartier is None:
+        raise HTTPException(status_code=404, detail="Il n'y a pas de quartier qui correspond à l'id fourni")
     
-    return quartiers
+    return quartier
 
 
 
@@ -249,10 +251,25 @@ async def create_client(
     create_at: datetime = Form(...),  # Recevoir comme chaîne
     is_actif: bool = Form(...),
     update_at: datetime = Form(...),  # Recevoir comme chaîne
-    num_rccm: Optional[str] = Form(None),
-    nom_entreprise: Optional[str] = Form(None),
+    num_rccm: Optional[str] = Form(...),
+    nom_entreprise: Optional[str] = Form(...),
     db: Session = Depends(get_db)
 ):
+    
+    
+    
+    # Vérifier si l'email ou le numéro de téléphone existe déjà
+    existing_user = db.query(Utilisateur).filter(
+        (Utilisateur.email == email) | (Utilisateur.tel == tel)
+    ).first()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="L'email ou le numéro de téléphone existe déjà dans la base de données."
+    )
+    
+    
     
     #hasher le mot de passe
     hashed_password2 = hash_password(mot_de_passe)

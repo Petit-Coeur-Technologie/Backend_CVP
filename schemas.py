@@ -22,6 +22,8 @@ class Quartier(BaseModel):
     id: int
     quartier : str
     
+    class Config:
+        orm_mode = True
 
 
 class SingleQuartier(Quartier):
