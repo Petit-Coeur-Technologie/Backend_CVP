@@ -199,6 +199,42 @@ def get_pmes(db : Session = Depends(get_db)):
 
     return pme_list
      
+@app.get('/pmes/{pme_id}', response_model=schemas.PmeOut, tags=['Pme'])
+def get_pme(pme_id: int, db: Session = Depends(get_db)):
+    # Requête pour récupérer les données de la PME avec les informations utilisateur associées
+    pme = db.query(Pme).outerjoin(Utilisateur).filter(Pme.id == pme_id).first()
+    
+    if pme is None:
+        raise HTTPException(status_code=404, detail="L'id fourni ne correspond à aucune Pme")
+
+    # Transformation en format approprié
+    pme_data = schemas.PmeOut(
+        id=pme.id,
+        utilisateur=schemas.UtilisateurOut(
+            id=pme.utilisateur.id,
+            quartier_id=pme.utilisateur.quartier_id,
+            nom_prenom=pme.utilisateur.nom_prenom,
+            tel=pme.utilisateur.tel,
+            genre=pme.utilisateur.genre,
+            email=pme.utilisateur.email,
+            mot_de_passe=pme.utilisateur.mot_de_passe,
+            copie_pi=pme.utilisateur.copie_pi,
+            role=pme.utilisateur.role,
+            create_at=pme.utilisateur.create_at,
+            is_actif=pme.utilisateur.is_actif,
+            update_at=pme.utilisateur.update_at,
+        ),
+        nom_pme=pme.nom_pme,
+        description=pme.description,
+        zone_intervention=pme.zone_intervention,
+        num_enregistrement=pme.num_enregistrement,
+        tarif_mensuel=pme.tarif_mensuel,
+        tarif_abonnement=pme.tarif_abonnement,
+        logo_pme=pme.logo_pme
+    )
+
+    return pme_data
+
 
 @app.post("/client", tags=["Clients"])
 async def create_client(
