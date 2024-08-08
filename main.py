@@ -88,7 +88,7 @@ def get_quartier(quartier_id: int, db: Session = Depends(get_db)):
 
 
 
-@app.post("/pme", response_model=schemas.PmeCreate, tags=["Pme"])
+@app.post("/pme", response_model=schemas.PmeOut, tags=["Pme"])
 async def register_pme(
     quartier_id: int = Form(...),
     nom_prenom: str = Form(...),

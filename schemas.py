@@ -109,7 +109,7 @@ class UtilisateurOut(BaseModel):
     class Config:
         orm_mode = True
 
-class PmeOut(BaseModel):
+class PmeOut(Utilisateur):
     id: int
     utilisateur: UtilisateurOut
     nom_pme: str
