@@ -99,7 +99,6 @@ class UtilisateurOut(BaseModel):
     tel: str
     genre: str
     email: str
-    mot_de_passe: str
     copie_pi: str
     role: str
     create_at: datetime

@@ -180,7 +180,6 @@ async def register_pme(
             "tel": db_utilisateur.tel,
             "genre": db_utilisateur.genre,
             "email": db_utilisateur.email,
-            "mot_de_passe": db_utilisateur.mot_de_passe,
             "copie_pi": db_utilisateur.copie_pi,
             "role": db_utilisateur.role,
             "create_at": db_utilisateur.create_at.isoformat(),
