@@ -107,7 +107,7 @@ class UtilisateurOut(BaseModel):
     update_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class PmeOut(BaseModel):
     id: int
@@ -121,7 +121,7 @@ class PmeOut(BaseModel):
     logo_pme: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
     
 class Clientout(ClientCreate):
     id : int

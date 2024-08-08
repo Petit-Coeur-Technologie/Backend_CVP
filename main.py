@@ -1,10 +1,10 @@
 import os
 import uuid
 from datetime import datetime
-from typing import Union, Optional
+from typing import  Optional
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-import time
 from sqlalchemy.orm import Session
 from typing import List
 from models import *
@@ -109,36 +109,34 @@ async def register_pme(
     logo_pme: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    
-    
     # Vérifier si l'email ou le numéro de téléphone existe déjà
     existing_user = db.query(Utilisateur).filter(
         (Utilisateur.email == email) | (Utilisateur.tel == tel)
     ).first()
-    
+
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="L'email ou le numéro de téléphone existe déjà dans la base de données."
-    )
-     
-    #hasher le mot de passe
+        )
+
+    # Hasher le mot de passe
     hashed_password = hash_password(mot_de_passe)
-    
+
     # Sauvegarde du fichier copie_pi
     copie_pi_file_name = f"{uuid.uuid4()}_{copie_pi.filename}"
     copie_pi_file_path = os.path.join(UPLOAD_DIRECTORY_COPIE_PI, copie_pi_file_name)
-    
+
     with open(copie_pi_file_path, "wb") as buffer:
         buffer.write(await copie_pi.read())
-    
+
     # Sauvegarde du fichier logo_pme
     logo_pme_file_name = f"{uuid.uuid4()}_{logo_pme.filename}"
     logo_pme_file_path = os.path.join(UPLOAD_DIRECTORY_LOGO_PME, logo_pme_file_name)
-    
+
     with open(logo_pme_file_path, "wb") as buffer:
         buffer.write(await logo_pme.read())
-    
+
     # Création de l'utilisateur
     db_utilisateur = Utilisateur(
         quartier_id=quartier_id,
@@ -156,7 +154,7 @@ async def register_pme(
     db.add(db_utilisateur)
     db.commit()
     db.refresh(db_utilisateur)
-    
+
     # Création de l'entité PME
     db_pme = Pme(
         utilisateur_id=db_utilisateur.id,
@@ -172,8 +170,37 @@ async def register_pme(
     db.commit()
     db.refresh(db_pme)
 
-    return db_utilisateur
+    # Convertir en dictionnaire pour la réponse
+    pme_data = {
+        "id": db_pme.id,
+        "utilisateur": {
+            "id": db_utilisateur.id,
+            "quartier_id": db_utilisateur.quartier_id,
+            "nom_prenom": db_utilisateur.nom_prenom,
+            "tel": db_utilisateur.tel,
+            "genre": db_utilisateur.genre,
+            "email": db_utilisateur.email,
+            "mot_de_passe": db_utilisateur.mot_de_passe,
+            "copie_pi": db_utilisateur.copie_pi,
+            "role": db_utilisateur.role,
+            "create_at": db_utilisateur.create_at.isoformat(),
+            "is_actif": db_utilisateur.is_actif,
+            "update_at": db_utilisateur.update_at.isoformat(),
+        },
+        "nom_pme": db_pme.nom_pme,
+        "description": db_pme.description,
+        "zone_intervention": db_pme.zone_intervention,
+        "num_enregistrement": db_pme.num_enregistrement,
+        "tarif_mensuel": db_pme.tarif_mensuel,
+        "tarif_abonnement": db_pme.tarif_abonnement,
+        "logo_pme": db_pme.logo_pme,
+    }
 
+    # Utiliser `parse_obj` pour créer l'instance Pydantic
+    pme_out = schemas.PmeOut(**pme_data)
+
+    return pme_out
+   
 @app.get('/pmes', response_model=List[schemas.PmeOut], tags=['Pme'])
 def get_pmes(db : Session = Depends(get_db)):
     
