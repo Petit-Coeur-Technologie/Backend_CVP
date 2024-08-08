@@ -376,5 +376,33 @@ async def create_client(
                  detail="Le rôle doit être 'menage' si ce n'est pas un client entreprise."
             )
             
-        
+@app.get('/clients', response_model=List[schemas.ClientOut], tags=['Client'])
+def get_clients(db: Session = Depends(get_db)):
+    # Requête pour obtenir tous les clients avec les informations d'utilisateur associées
+    clients = db.query(Client).outerjoin(Utilisateur).all()
+
+    # Transformer les résultats en format approprié
+    client_list = []
+    for client in clients:
+        client_data = schemas.ClientOut(
+            id=client.id,
+            utilisateur=schemas.UtilisateurOut(
+                id=client.utilisateur.id,
+                quartier_id=client.utilisateur.quartier_id,
+                nom_prenom=client.utilisateur.nom_prenom,
+                tel=client.utilisateur.tel,
+                genre=client.utilisateur.genre,
+                email=client.utilisateur.email,
+                copie_pi=client.utilisateur.copie_pi,
+                role=client.utilisateur.role,
+                create_at=client.utilisateur.create_at,
+                is_actif=client.utilisateur.is_actif,
+                update_at=client.utilisateur.update_at,
+            ),
+            num_rccm=client.num_rccm,
+            nom_entreprise=client.nom_entreprise
+        )
+        client_list.append(client_data)
+
+    return client_list        
             
