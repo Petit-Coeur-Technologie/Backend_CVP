@@ -184,7 +184,8 @@ class Pme(Base):
     nom_pme = Column(
         String,
         nullable=False,
-        index=True
+        index=True,
+        unique=True
     )
     description = Column(
         Text,
@@ -196,7 +197,8 @@ class Pme(Base):
     )
     num_enregistrement = Column(
         String,
-        nullable=False
+        nullable=False,
+        unique=True
     )
     tarif_mensuel = Column(
         Integer,

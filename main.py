@@ -113,13 +113,20 @@ async def register_pme(
     existing_user = db.query(Utilisateur).filter(
         (Utilisateur.email == email) | (Utilisateur.tel == tel)
     ).first()
-
+    existing_pme = db.query(Pme).filter(
+        (Pme.nom_pme == nom_pme) |(Pme.num_enregistrement ==num_enregistrement)
+    )
+    
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="L'email ou le numéro de téléphone existe déjà dans la base de données."
         )
-
+    if existing_pme:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"La pme ou le numéro d'enregistrement existe déjà dans le système"
+        )
     # Hasher le mot de passe
     hashed_password = hash_password(mot_de_passe)
 
