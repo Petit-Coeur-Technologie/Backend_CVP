@@ -6,6 +6,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, sta
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List
 from models import *
 from database import engine, SessionLocal, get_db, Base
@@ -378,31 +379,35 @@ async def create_client(
             
 @app.get('/clients', response_model=List[schemas.ClientOut], tags=['Client'])
 def get_clients(db: Session = Depends(get_db)):
-    # Requête pour obtenir tous les clients avec les informations d'utilisateur associées
-    clients = db.query(Client).outerjoin(Utilisateur).all()
+    # Requête pour obtenir tous les utilisateurs avec une jointure externe sur Client
+    utilisateurs = db.query(Utilisateur).outerjoin(Client, Utilisateur.id == Client.utilisateur_id).filter(
+        or_(Utilisateur.role == "entreprise", Utilisateur.role == "menage")
+    ).all()
 
     # Transformer les résultats en format approprié
     client_list = []
-    for client in clients:
+    for utilisateur in utilisateurs:
+        # Vérifier s'il y a des clients associés
+        client = utilisateur.clients[0] if utilisateur.clients else None
+        
         client_data = schemas.ClientOut(
-            id=client.id,
+            id=utilisateur.id,
             utilisateur=schemas.UtilisateurOut(
-                id=client.utilisateur.id,
-                quartier_id=client.utilisateur.quartier_id,
-                nom_prenom=client.utilisateur.nom_prenom,
-                tel=client.utilisateur.tel,
-                genre=client.utilisateur.genre,
-                email=client.utilisateur.email,
-                copie_pi=client.utilisateur.copie_pi,
-                role=client.utilisateur.role,
-                create_at=client.utilisateur.create_at,
-                is_actif=client.utilisateur.is_actif,
-                update_at=client.utilisateur.update_at,
+                id=utilisateur.id,
+                quartier_id=utilisateur.quartier_id,
+                nom_prenom=utilisateur.nom_prenom,
+                tel=utilisateur.tel,
+                genre=utilisateur.genre,
+                email=utilisateur.email,
+                copie_pi=utilisateur.copie_pi,
+                role=utilisateur.role,
+                create_at=utilisateur.create_at,
+                is_actif=utilisateur.is_actif,
+                update_at=utilisateur.update_at,
             ),
-            num_rccm=client.num_rccm,
-            nom_entreprise=client.nom_entreprise
+            num_rccm=client.num_rccm if client else None,
+            nom_entreprise=client.nom_entreprise if client else None
         )
         client_list.append(client_data)
 
-    return client_list        
-            
+    return client_list
