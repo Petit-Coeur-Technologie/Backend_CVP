@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -43,6 +43,7 @@ class Utilisateur(BaseModel):
     create_at : datetime
     is_actif: bool
     update_at: datetime      
+    
 class UtilisateurBase(BaseModel):
     quartier_id : int
     nom_prenom : str
@@ -70,9 +71,26 @@ class PmeCreate(UtilisateurCreate):
     tarif_abonnement: int
     logo_pme: Optional[str] = None
     
-class ClientCreate(UtilisateurCreate):
+class ClientCreate(UtilisateurBase):
     num_rccm: Optional[str] = None
     nom_entreprise: Optional[str] = None
+
+    @field_validator('num_rccm', 'nom_entreprise', mode='after')
+    def check_entreprise_fields(cls, values):
+        role = values.get('role')
+        num_rccm = values.get('num_rccm')
+        nom_entreprise = values.get('nom_entreprise')
+
+        if role == 'entreprise':
+            if not num_rccm:
+                raise ValueError('num_rccm is required for role entreprise')
+            if not nom_entreprise:
+                raise ValueError('nom_entreprise is required for role entreprise')
+
+        return values
+
+    class Config:
+        from_attributes = True
     
 class UtilisateurOut(BaseModel):
     id: int

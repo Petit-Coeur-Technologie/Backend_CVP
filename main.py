@@ -68,6 +68,15 @@ def get_quartiers_by_com(id:int, db: Session = Depends(get_db)):
     
     return quartiers
 
+
+
+@app.get('/quartiers', response_model=List[schemas.Quartier], tags=["Quartier"])
+def get_quartier(db: Session = Depends(get_db)):
+    
+    quartiers = db.query(Quartier).all()
+    
+    return quartiers
+
 @app.get('/quartiers/{quartier_id}', response_model=schemas.Quartier, tags=["Quartier"])
 def get_quartier(quartier_id: int, db: Session = Depends(get_db)):
     quartier = db.query(Quartier).filter(Quartier.id == quartier_id).first()
@@ -239,7 +248,7 @@ def get_pme(pme_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/client", tags=["Clients"])
-async def create_client(
+async def register_client(
     role: str = Form(...),
     quartier_id: int = Form(...),
     nom_prenom: str = Form(...),
@@ -248,15 +257,16 @@ async def create_client(
     email: str = Form(...),
     mot_de_passe: str = Form(...),
     copie_pi: UploadFile = File(...),
-    create_at: datetime = Form(...),  # Recevoir comme chaîne
+    create_at: datetime = Form(...),
     is_actif: bool = Form(...),
-    update_at: datetime = Form(...),  # Recevoir comme chaîne
-    num_rccm: Optional[str] = Form(...),
-    nom_entreprise: Optional[str] = Form(...),
+    update_at: datetime = Form(...),
+    num_rccm: Optional[str] = Form(None),
+    nom_entreprise: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    
-    
+    print(f"role: {role}")
+    print(f"num_rccm: {num_rccm}")
+    print(f"nom_entreprise: {nom_entreprise}")
     
     # Vérifier si l'email ou le numéro de téléphone existe déjà
     existing_user = db.query(Utilisateur).filter(
@@ -267,12 +277,10 @@ async def create_client(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="L'email ou le numéro de téléphone existe déjà dans la base de données."
-    )
+        )
     
-    
-    
-    #hasher le mot de passe
-    hashed_password2 = hash_password(mot_de_passe)
+    # Hacher le mot de passe
+    hashed_password = hash_password(mot_de_passe)
     
     # Sauvegarde du fichier copie_pi
     copie_pi_file_name = f"{uuid.uuid4()}_{copie_pi.filename}"
@@ -280,7 +288,7 @@ async def create_client(
     
     with open(copie_pi_file_path, "wb") as buffer:
         buffer.write(await copie_pi.read())
-        
+    
     # Création de l'utilisateur
     db_utilisateur = Utilisateur(
         quartier_id=quartier_id,
@@ -288,8 +296,8 @@ async def create_client(
         tel=tel,
         genre=genre,
         email=email,
-        mot_de_passe=hashed_password2,
-        copie_pi=copie_pi.filename,
+        mot_de_passe=hashed_password,
+        copie_pi=copie_pi_file_name,  # Enregistrer le nom du fichier
         role=role,
         create_at=create_at,
         is_actif=is_actif,
@@ -299,7 +307,13 @@ async def create_client(
     db.commit()
     db.refresh(db_utilisateur)
     
-    if role == "entreprise" and num_rccm and nom_entreprise:
+    if role == "entreprise":
+        if not num_rccm or not nom_entreprise:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Vous devez le nom et le numéro d'enregistrement de l'entreprise"
+            )
+        
         # Création de l'entité Client pour entreprise
         db_client = Client(
             utilisateur_id=db_utilisateur.id,
