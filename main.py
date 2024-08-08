@@ -1,7 +1,7 @@
 import os
 import uuid
 from datetime import datetime
-from typing import  Optional
+from typing import  Optional, Union
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -280,9 +280,8 @@ def get_pme(pme_id: int, db: Session = Depends(get_db)):
     return pme_data
 
 
-@app.post("/client", tags=["Clients"])
-async def register_client(
-    role: str = Form(...),
+@app.post("/client", response_model=Union[schemas.ClientOut, schemas.UtilisateurOut], tags=["Client"])
+async def create_client(
     quartier_id: int = Form(...),
     nom_prenom: str = Form(...),
     tel: str = Form(...),
@@ -290,38 +289,35 @@ async def register_client(
     email: str = Form(...),
     mot_de_passe: str = Form(...),
     copie_pi: UploadFile = File(...),
+    role: str = Form(...),
     create_at: datetime = Form(...),
-    is_actif: bool = Form(...),
     update_at: datetime = Form(...),
+    is_actif: bool = Form(...),
     num_rccm: Optional[str] = Form(None),
     nom_entreprise: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    print(f"role: {role}")
-    print(f"num_rccm: {num_rccm}")
-    print(f"nom_entreprise: {nom_entreprise}")
-    
     # Vérifier si l'email ou le numéro de téléphone existe déjà
     existing_user = db.query(Utilisateur).filter(
         (Utilisateur.email == email) | (Utilisateur.tel == tel)
     ).first()
-    
+
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="L'email ou le numéro de téléphone existe déjà dans la base de données."
         )
-    
-    # Hacher le mot de passe
+
+    # Hasher le mot de passe
     hashed_password = hash_password(mot_de_passe)
-    
+
     # Sauvegarde du fichier copie_pi
     copie_pi_file_name = f"{uuid.uuid4()}_{copie_pi.filename}"
     copie_pi_file_path = os.path.join(UPLOAD_DIRECTORY_COPIE_PI, copie_pi_file_name)
-    
+
     with open(copie_pi_file_path, "wb") as buffer:
         buffer.write(await copie_pi.read())
-    
+
     # Création de l'utilisateur
     db_utilisateur = Utilisateur(
         quartier_id=quartier_id,
@@ -330,7 +326,7 @@ async def register_client(
         genre=genre,
         email=email,
         mot_de_passe=hashed_password,
-        copie_pi=copie_pi_file_name,  # Enregistrer le nom du fichier
+        copie_pi=copie_pi_file_name,
         role=role,
         create_at=create_at,
         is_actif=is_actif,
@@ -339,15 +335,9 @@ async def register_client(
     db.add(db_utilisateur)
     db.commit()
     db.refresh(db_utilisateur)
-    
-    if role == "entreprise":
-        if not num_rccm or not nom_entreprise:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Vous devez le nom et le numéro d'enregistrement de l'entreprise"
-            )
-        
-        # Création de l'entité Client pour entreprise
+
+    # Vérifier si le role est 'entreprise' et stocker les informations dans la table 'clients'
+    if role == "entreprise" and nom_entreprise:
         db_client = Client(
             utilisateur_id=db_utilisateur.id,
             num_rccm=num_rccm,
@@ -356,5 +346,35 @@ async def register_client(
         db.add(db_client)
         db.commit()
         db.refresh(db_client)
-    
-    return db_utilisateur
+
+        client_data = schemas.ClientOut(
+            id=db_client.id,
+            utilisateur=db_utilisateur,
+            num_rccm=db_client.num_rccm,
+            nom_entreprise=db_client.nom_entreprise
+        )
+        return client_data
+    else:
+        if role == "menage":
+            user_data = schemas.UtilisateurOut(
+                  id=db_utilisateur.id,
+                  quartier_id=db_utilisateur.quartier_id,
+                  nom_prenom=db_utilisateur.nom_prenom,
+                  tel=db_utilisateur.tel,
+                  genre=db_utilisateur.genre,
+                  email=db_utilisateur.email,
+                  copie_pi=db_utilisateur.copie_pi,
+                  role=db_utilisateur.role,
+                  create_at=db_utilisateur.create_at,
+                  is_actif=db_utilisateur.is_actif,
+                  update_at=db_utilisateur.update_at
+            )
+            return user_data
+        else:
+            raise HTTPException(
+                 status_code=status.HTTP_400_BAD_REQUEST,
+                 detail="Le rôle doit être 'menage' si ce n'est pas un client entreprise."
+            )
+            
+        
+            

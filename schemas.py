@@ -9,28 +9,28 @@ class Ville(BaseModel):
     ville : str
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Commune(BaseModel):
     id : int
     commune : str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class Quartier(BaseModel):
     id: int
     quartier : str
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class SingleQuartier(Quartier):
     ville_id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class Utilisateur(BaseModel):
     quartier_id : int
@@ -71,26 +71,9 @@ class PmeCreate(UtilisateurCreate):
     tarif_abonnement: int
     logo_pme: Optional[str] = None
     
-class ClientCreate(UtilisateurBase):
+class ClientCreate(BaseModel):
     num_rccm: Optional[str] = None
     nom_entreprise: Optional[str] = None
-
-    @field_validator('num_rccm', 'nom_entreprise', mode='after')
-    def check_entreprise_fields(cls, values):
-        role = values.get('role')
-        num_rccm = values.get('num_rccm')
-        nom_entreprise = values.get('nom_entreprise')
-
-        if role == 'entreprise':
-            if not num_rccm:
-                raise ValueError('num_rccm is required for role entreprise')
-            if not nom_entreprise:
-                raise ValueError('nom_entreprise is required for role entreprise')
-
-        return values
-
-    class Config:
-        from_attributes = True
     
 class UtilisateurOut(BaseModel):
     id: int
@@ -122,5 +105,11 @@ class PmeOut(BaseModel):
     class Config:
         from_attributes = True
     
-class Clientout(ClientCreate):
-    id : int
+class ClientOut(BaseModel):
+    id: int
+    utilisateur: UtilisateurOut
+    num_rccm: Optional[str] = None
+    nom_entreprise: Optional[str] = None
+
+    class Config:
+        from_attributes = True
