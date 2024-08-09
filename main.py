@@ -381,7 +381,7 @@ async def create_client(
 @app.get('/clients', response_model=List[schemas.ClientOut], tags=['Client'])
 def get_clients(db: Session = Depends(get_db)):
     # Requête pour obtenir tous les utilisateurs avec une jointure externe sur Client
-    utilisateurs = db.query(Utilisateur).outerjoin(Client, Utilisateur.id == Client.utilisateur_id).filter(
+    utilisateurs = db.query(Utilisateur).outerjoin(Client, Client.utilisateur_id==Utilisateur.id).filter(
         or_(Utilisateur.role == "entreprise", Utilisateur.role == "menage")
     ).all()
 
@@ -392,7 +392,7 @@ def get_clients(db: Session = Depends(get_db)):
         client = utilisateur.clients[0] if utilisateur.clients else None
         
         client_data = schemas.ClientOut(
-            id=utilisateur.id,
+            id=client.id if client else utilisateur.id,
             utilisateur=schemas.UtilisateurOut(
                 id=utilisateur.id,
                 quartier_id=utilisateur.quartier_id,
@@ -413,7 +413,48 @@ def get_clients(db: Session = Depends(get_db)):
 
     return client_list
 
-# @app.get('/clients/{client_id}', response_model=schemas.ClientOut)
-# def get_client(client_id:int, db: Session = Depends(get_db)):
+@app.get('/clients/{client_role}/{client_id}', response_model=schemas.ClientOut, tags=["Client"])
+def get_client(client_role:str, client_id:int, db: Session = Depends(get_db)):
+    client = ""
+    id_data  = []
+    num_rccm_data = []
+    nom_entreprise_data = []
     
-#     client = db.query(Utilisateur).outerjoin(Client).filter().id == pme_id).first()
+    data = db.query(Utilisateur)
+    
+    client = data.filter(Utilisateur.id == client_id).first()
+    
+    if client_role == "entreprise" :
+        client = data.outerjoin(Client).filter(Client.id==client_id).first()
+        
+        id_data = [int(clt.id) for clt in client.clients] 
+        num_rccm_data=[str(clt.num_rccm) for clt in client.clients]
+        nom_entreprise_data=[str(clt.nom_entreprise) for clt in client.clients]
+        
+    if client_role == "pme":
+            raise HTTPException(status_code=403, detail="vous n'êtes sur le bon endpoint")
+      
+    id_end =  id_data[0] if client.clients else client.id
+    num_rccm_end = str(num_rccm_data[0]) if client.clients else None
+    nom_entreprise_end = str(nom_entreprise_data[0]) if client.clients else None
+    client_data = schemas.ClientOut(
+           id=id_end,
+           utilisateur=schemas.UtilisateurOut(
+               id=client.id,
+               quartier_id=client.quartier_id,
+               nom_prenom=client.nom_prenom,
+               tel=client.tel,
+               genre=client.genre,
+               email=client.email,
+               copie_pi=client.copie_pi,
+               role=client.role,
+               create_at=client.create_at,
+               is_actif=client.is_actif,
+               update_at=client.update_at,
+           ),
+           
+           num_rccm = num_rccm_end ,
+           nom_entreprise= nom_entreprise_end
+       )
+    
+    return client_data
