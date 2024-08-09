@@ -80,6 +80,7 @@ def get_quartier(db: Session = Depends(get_db)):
 
 @app.get('/quartiers/{quartier_id}', response_model=schemas.Quartier, tags=["Quartier"])
 def get_quartier(quartier_id: int, db: Session = Depends(get_db)):
+    
     quartier = db.query(Quartier).filter(Quartier.id == quartier_id).first()
     
     if quartier is None:
@@ -115,8 +116,8 @@ async def register_pme(
         (Utilisateur.email == email) | (Utilisateur.tel == tel)
     ).first()
     existing_pme = db.query(Pme).filter(
-        (Pme.nom_pme == nom_pme) |(Pme.num_enregistrement ==num_enregistrement)
-    )
+        (Pme.nom_pme == nom_pme) | (Pme.num_enregistrement == num_enregistrement)
+    ).first()
     
     if existing_user:
         raise HTTPException(
@@ -411,3 +412,8 @@ def get_clients(db: Session = Depends(get_db)):
         client_list.append(client_data)
 
     return client_list
+
+# @app.get('/clients/{client_id}', response_model=schemas.ClientOut)
+# def get_client(client_id:int, db: Session = Depends(get_db)):
+    
+#     client = db.query(Utilisateur).outerjoin(Client).filter().id == pme_id).first()
