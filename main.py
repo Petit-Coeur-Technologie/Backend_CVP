@@ -416,7 +416,7 @@ def get_clients(db: Session = Depends(get_db)):
 @app.get('/clients/{client_role}/{client_id}', response_model=schemas.ClientOut, tags=["Client"])
 def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
     # Vérification du rôle du client
-    if client_role == "pme":
+    if client_role not in ["menage", "entreprise"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Vous ne pouvez afficher que les informations concernant un client de type menage ou entreprise!"
@@ -426,7 +426,7 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
     utilisateur = db.query(Utilisateur).filter(Utilisateur.id == client_id).first()
 
     # Si l'utilisateur n'existe pas ou si le rôle est "pme", lever une exception
-    if utilisateur is None or utilisateur.role == "pme":
+    if utilisateur is None or utilisateur.role != client_role:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Aucun client ne correspond à vos paramètres de recherches"
@@ -480,3 +480,4 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
         num_rccm=None,
         nom_entreprise=None
     )
+    
