@@ -6,7 +6,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, sta
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from typing import List
 from models import *
 from database import engine, SessionLocal, get_db, Base
@@ -84,7 +84,7 @@ def get_quartier(quartier_id: int, db: Session = Depends(get_db)):
     quartier = db.query(Quartier).filter(Quartier.id == quartier_id).first()
     
     if quartier is None:
-        raise HTTPException(status_code=404, detail="Il n'y a pas de quartier qui correspond à l'id fourni")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Il n'y a pas de quartier qui correspond à l'id fourni")
     
     return quartier
 
@@ -251,7 +251,7 @@ def get_pme(pme_id: int, db: Session = Depends(get_db)):
     pme = db.query(Pme).outerjoin(Utilisateur).filter(Pme.id == pme_id).first()
     
     if pme is None:
-        raise HTTPException(status_code=404, detail="L'id fourni ne correspond à aucune Pme")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="L'id fourni ne correspond à aucune Pme")
 
     # Transformation en format approprié
     pme_data = schemas.PmeOut(
@@ -414,47 +414,74 @@ def get_clients(db: Session = Depends(get_db)):
     return client_list
 
 @app.get('/clients/{client_role}/{client_id}', response_model=schemas.ClientOut, tags=["Client"])
-def get_client(client_role:str, client_id:int, db: Session = Depends(get_db)):
-    client = ""
-    id_data  = []
-    num_rccm_data = []
-    nom_entreprise_data = []
-    
-    data = db.query(Utilisateur)
-    
-    client = data.filter(Utilisateur.id == client_id).first()
-    
-    if client_role == "entreprise" :
-        client = data.outerjoin(Client).filter(Client.id==client_id).first()
-        
-        id_data = [int(clt.id) for clt in client.clients] 
-        num_rccm_data=[str(clt.num_rccm) for clt in client.clients]
-        nom_entreprise_data=[str(clt.nom_entreprise) for clt in client.clients]
-        
+def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
+    # Vérification du rôle du client
     if client_role == "pme":
-            raise HTTPException(status_code=403, detail="vous n'êtes sur le bon endpoint")
-      
-    id_end =  id_data[0] if client.clients else client.id
-    num_rccm_end = str(num_rccm_data[0]) if client.clients else None
-    nom_entreprise_end = str(nom_entreprise_data[0]) if client.clients else None
-    client_data = schemas.ClientOut(
-           id=id_end,
-           utilisateur=schemas.UtilisateurOut(
-               id=client.id,
-               quartier_id=client.quartier_id,
-               nom_prenom=client.nom_prenom,
-               tel=client.tel,
-               genre=client.genre,
-               email=client.email,
-               copie_pi=client.copie_pi,
-               role=client.role,
-               create_at=client.create_at,
-               is_actif=client.is_actif,
-               update_at=client.update_at,
-           ),
-           
-           num_rccm = num_rccm_end ,
-           nom_entreprise= nom_entreprise_end
-       )
-    
-    return client_data
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous ne pouvez afficher que les informations concernant un client de type menage ou entreprise!"
+        )
+
+    # Requête pour récupérer les informations de l'utilisateur
+    utilisateur = db.query(Utilisateur).filter(Utilisateur.id == client_id).first()
+
+    # Si l'utilisateur n'existe pas, lever une exception
+    if utilisateur is None or utilisateur.role == "pme":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aucun client ne correspond à vos paramètres de recherches"
+        )
+
+    # Si le rôle est "entreprise", joindre avec la table Client
+    if client_role == "entreprise":
+        client = (
+            db.query(Client)
+            .join(Utilisateur)
+            .filter(Client.id == client_id)
+            .first()
+        )
+        
+        if client is None:
+            raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aucun client ne correspond à vos paramètres de recherches"
+        )
+        
+        return schemas.ClientOut(
+                id=client.id,
+                utilisateur=schemas.UtilisateurOut(
+                    id=utilisateur.id,
+                    quartier_id=utilisateur.quartier_id,
+                    nom_prenom=utilisateur.nom_prenom,
+                    tel=utilisateur.tel,
+                    genre=utilisateur.genre,
+                    email=utilisateur.email,
+                    copie_pi=utilisateur.copie_pi,
+                    role=utilisateur.role,
+                    create_at=utilisateur.create_at,
+                    is_actif=utilisateur.is_actif,
+                    update_at=utilisateur.update_at,
+                ),
+                num_rccm=client.num_rccm,
+                nom_entreprise=client.nom_entreprise
+            )
+
+    # Pour les rôles autres que "entreprise", retourner uniquement les informations utilisateur
+    return schemas.ClientOut(
+        id=utilisateur.id,
+        utilisateur=schemas.UtilisateurOut(
+            id=utilisateur.id,
+            quartier_id=utilisateur.quartier_id,
+            nom_prenom=utilisateur.nom_prenom,
+            tel=utilisateur.tel,
+            genre=utilisateur.genre,
+            email=utilisateur.email,
+            copie_pi=utilisateur.copie_pi,
+            role=utilisateur.role,
+            create_at=utilisateur.create_at,
+            is_actif=utilisateur.is_actif,
+            update_at=utilisateur.update_at,
+        ),
+        num_rccm=None,
+        nom_entreprise=None
+    )
