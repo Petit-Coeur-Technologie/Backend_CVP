@@ -425,7 +425,7 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
     # Requête pour récupérer les informations de l'utilisateur
     utilisateur = db.query(Utilisateur).filter(Utilisateur.id == client_id).first()
 
-    # Si l'utilisateur n'existe pas, lever une exception
+    # Si l'utilisateur n'existe pas ou si le rôle est "pme", lever une exception
     if utilisateur is None or utilisateur.role == "pme":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -434,37 +434,32 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
 
     # Si le rôle est "entreprise", joindre avec la table Client
     if client_role == "entreprise":
-        client = (
-            db.query(Client)
-            .join(Utilisateur)
-            .filter(Client.id == client_id)
-            .first()
-        )
-        
+        client = db.query(Client).filter(Client.utilisateur_id == utilisateur.id).first()
+
         if client is None:
             raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Aucun client ne correspond à vos paramètres de recherches"
-        )
-        
-        return schemas.ClientOut(
-                id=client.id,
-                utilisateur=schemas.UtilisateurOut(
-                    id=utilisateur.id,
-                    quartier_id=utilisateur.quartier_id,
-                    nom_prenom=utilisateur.nom_prenom,
-                    tel=utilisateur.tel,
-                    genre=utilisateur.genre,
-                    email=utilisateur.email,
-                    copie_pi=utilisateur.copie_pi,
-                    role=utilisateur.role,
-                    create_at=utilisateur.create_at,
-                    is_actif=utilisateur.is_actif,
-                    update_at=utilisateur.update_at,
-                ),
-                num_rccm=client.num_rccm,
-                nom_entreprise=client.nom_entreprise
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Aucun client ne correspond à vos paramètres de recherches"
             )
+
+        return schemas.ClientOut(
+            id=client.id,
+            utilisateur=schemas.UtilisateurOut(
+                id=utilisateur.id,
+                quartier_id=utilisateur.quartier_id,
+                nom_prenom=utilisateur.nom_prenom,
+                tel=utilisateur.tel,
+                genre=utilisateur.genre,
+                email=utilisateur.email,
+                copie_pi=utilisateur.copie_pi,
+                role=utilisateur.role,
+                create_at=utilisateur.create_at,
+                is_actif=utilisateur.is_actif,
+                update_at=utilisateur.update_at,
+            ),
+            num_rccm=client.num_rccm,
+            nom_entreprise=client.nom_entreprise
+        )
 
     # Pour les rôles autres que "entreprise", retourner uniquement les informations utilisateur
     return schemas.ClientOut(
