@@ -6,10 +6,10 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, sta
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_
+from sqlalchemy import or_
 from typing import List
 from models import *
-from database import engine, SessionLocal, get_db, Base
+from database import engine, get_db, Base
 import schemas
 from utils import hash_password
 
@@ -90,7 +90,7 @@ def get_quartier(quartier_id: int, db: Session = Depends(get_db)):
 
 
 
-@app.post("/pme", response_model=schemas.PmeOut, tags=["Pme"])
+@app.post("/pme", status_code=status.HTTP_201_CREATED, response_model=schemas.PmeOut, tags=["Pme"])
 async def register_pme(
     quartier_id: int = Form(...),
     nom_prenom: str = Form(...),
@@ -281,8 +281,10 @@ def get_pme(pme_id: int, db: Session = Depends(get_db)):
 
     return pme_data
 
-
-@app.post("/client", response_model=Union[schemas.ClientOut, schemas.UtilisateurOut], tags=["Client"])
+######################################################################################################
+#            Creation de compte pour les roles "menage" et "entreprise"                              #
+######################################################################################################
+@app.post("/client", status_code=status.HTTP_201_CREATED,response_model=Union[schemas.ClientOut, schemas.UtilisateurOut], tags=["Client"])
 async def create_client(
     quartier_id: int = Form(...),
     nom_prenom: str = Form(...),
@@ -357,6 +359,7 @@ async def create_client(
         )
         return client_data
     else:
+        # Si le role est formater les informations de clients selon UtilisateurOut
         if role == "menage":
             user_data = schemas.UtilisateurOut(
                   id=db_utilisateur.id,
@@ -377,7 +380,11 @@ async def create_client(
                  status_code=status.HTTP_400_BAD_REQUEST,
                  detail="Le rôle doit être 'menage' si ce n'est pas un client entreprise."
             )
-            
+
+
+######################################################################################################
+#            Affichage des informations du clients                                                   #
+######################################################################################################           
 @app.get('/clients', response_model=List[schemas.ClientOut], tags=['Client'])
 def get_clients(db: Session = Depends(get_db)):
     # Requête pour obtenir tous les utilisateurs avec une jointure externe sur Client
@@ -413,7 +420,11 @@ def get_clients(db: Session = Depends(get_db)):
 
     return client_list
 
-@app.get('/clients/{client_role}/{client_id}', response_model=schemas.ClientOut, tags=["Client"])
+
+######################################################################################################
+#                     Affichage des informations du clients                                          #
+###################################################################################################### 
+@app.get('/clients/{client_role}/{client_id}', response_model=Union[schemas.ClientOut, schemas.UtilisateurOut], tags=["Client"])
 def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
     # Vérification du rôle du client
     if client_role not in ["menage", "entreprise"]:
@@ -462,9 +473,7 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
         )
 
     # Pour les rôles autres que "entreprise", retourner uniquement les informations utilisateur
-    return schemas.ClientOut(
-        id=utilisateur.id,
-        utilisateur=schemas.UtilisateurOut(
+    return schemas.UtilisateurOut(
             id=utilisateur.id,
             quartier_id=utilisateur.quartier_id,
             nom_prenom=utilisateur.nom_prenom,
@@ -476,8 +485,5 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
             create_at=utilisateur.create_at,
             is_actif=utilisateur.is_actif,
             update_at=utilisateur.update_at,
-        ),
-        num_rccm=None,
-        nom_entreprise=None
-    )
+        )
     
