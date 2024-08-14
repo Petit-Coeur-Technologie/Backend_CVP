@@ -90,7 +90,9 @@ class UtilisateurOut(BaseModel):
 
     class Config:
         from_attributes = True
-
+class UtilisateurLogin(BaseModel):
+    email: EmailStr
+    password : str
 class PmeOut(BaseModel):
     id: int
     utilisateur: UtilisateurOut
@@ -113,3 +115,11 @@ class ClientOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: str | None = None
+    role : str

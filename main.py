@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from typing import  Optional, Union
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -11,7 +12,7 @@ from typing import List
 from models import *
 from database import engine, get_db, Base
 import schemas
-from utils import hash_password
+from utils import hash_password, verify_password, create_access_token
 
 
 Base.metadata.create_all(bind=engine)
@@ -487,3 +488,29 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
             update_at=utilisateur.update_at,
         )
     
+
+
+######################################################################################################
+#                     Affichage des informations du clients                                          #
+###################################################################################################### 
+@app.post('/login', tags=["Authentification"])
+def login_user(user_access: schemas.UtilisateurLogin, db: Session = Depends(get_db)):
+    
+    user = db.query(Utilisateur).filter(Utilisateur.email == user_access.email).first()
+    
+    if not user :
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Les accès fournis sont incorrects"
+        )
+    
+    if not verify_password(user_access.password, user.mot_de_passe):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Le mot de passe fourni n'est pas le bon"
+        )
+    access_token = create_access_token(data={"user_id":user.id, "role":user.role})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
