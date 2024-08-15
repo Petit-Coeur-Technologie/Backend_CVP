@@ -121,5 +121,24 @@ class Token(BaseModel):
     token_type: str
 
 class TokenData(BaseModel):
-    username: str | None = None
+    user_id: str | None = None
     role : str
+    
+
+class AbonnementBase(BaseModel):
+    pme_id: int
+    num_abonnement: str
+    tarif_abonnement: int
+    status_abonnement: bool = True  # Par défaut à True
+    debut_abonnement: datetime
+    fin_abonnement: datetime
+
+class AbonnementCreate(AbonnementBase):
+    pass
+
+class AbonnementOut(AbonnementBase):
+    id: int
+    utilisateurs_id: int
+
+    class Config:
+        orm_mode = True

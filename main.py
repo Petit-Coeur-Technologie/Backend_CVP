@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import  Optional, Union
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -12,7 +12,7 @@ from typing import List
 from models import *
 from database import engine, get_db, Base
 import schemas
-from utils import hash_password, verify_password, create_access_token
+from utils import hash_password, verify_password, create_access_token, role_required
 
 
 Base.metadata.create_all(bind=engine)
@@ -494,9 +494,9 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
 #                     Affichage des informations du clients                                          #
 ###################################################################################################### 
 @app.post('/login', tags=["Authentification"])
-def login_user(user_access: schemas.UtilisateurLogin, db: Session = Depends(get_db)):
+def login_user(user_access: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     
-    user = db.query(Utilisateur).filter(Utilisateur.email == user_access.email).first()
+    user = db.query(Utilisateur).filter(Utilisateur.email == user_access.username).first()
     
     if not user :
         raise HTTPException(
@@ -514,3 +514,38 @@ def login_user(user_access: schemas.UtilisateurLogin, db: Session = Depends(get_
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+######################################################################################################
+#                     creation d'un abonnement                                                       #
+######################################################################################################
+@app.post("/abonnement", response_model=schemas.AbonnementOut, tags=["Abonnement"])
+async def create_abonnement(
+    abonnement: schemas.AbonnementCreate,
+    current_user: schemas.UtilisateurOut = Depends(role_required(["menage", "entreprise"])),
+    db: Session = Depends(get_db)
+):
+    # Si l'utilisateur a le rôle "entreprise", vérifier qu'il est dans la table client
+    if current_user.role == "entreprise":
+        client = db.query(Client).filter(Client.utilisateur_id == current_user.id).first()
+        if not client:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="L'utilisateur entreprise n'est pas enregistré comme client."
+            )
+
+    # Créer l'abonnement
+    new_abonnement = Abonnement(
+        utilisateurs_id=current_user.id,
+        pme_id=abonnement.pme_id,
+        num_abonnement=abonnement.num_abonnement,
+        tarif_abonnement=abonnement.tarif_abonnement,
+        status_abonnement=abonnement.status_abonnement,
+        debut_abonnement=abonnement.debut_abonnement,
+        fin_abonnement=abonnement.fin_abonnement
+    )
+
+    db.add(new_abonnement)
+    db.commit()
+    db.refresh(new_abonnement)
+
+    return new_abonnement
