@@ -6,6 +6,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, sta
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List
@@ -19,6 +20,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+app.mount("/Uploads", StaticFiles(directory="Uploads"), name="uploads")
 # dossiers de destination pour les uploads
 UPLOAD_DIRECTORY_COPIE_PI = "Uploads/copie_pi"
 UPLOAD_DIRECTORY_LOGO_PME = "Uploads/logo_pme"
@@ -549,3 +551,5 @@ async def create_abonnement(
     db.refresh(new_abonnement)
 
     return new_abonnement
+
+

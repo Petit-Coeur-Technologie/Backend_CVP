@@ -129,7 +129,7 @@ class AbonnementBase(BaseModel):
     pme_id: int
     num_abonnement: str
     tarif_abonnement: int
-    status_abonnement: bool = True  # Par défaut à True
+    status_abonnement: str = "pending" # Par défaut à True
     debut_abonnement: datetime
     fin_abonnement: datetime
 
@@ -141,4 +141,4 @@ class AbonnementOut(AbonnementBase):
     utilisateurs_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
