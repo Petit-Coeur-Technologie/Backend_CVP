@@ -20,10 +20,10 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-app.mount("/Uploads", StaticFiles(directory="Uploads"), name="uploads")
+app.mount("/Uploads", StaticFiles(directory="static/Uploads"), name="uploads")
 # dossiers de destination pour les uploads
-UPLOAD_DIRECTORY_COPIE_PI = "Uploads/copie_pi"
-UPLOAD_DIRECTORY_LOGO_PME = "Uploads/logo_pme"
+UPLOAD_DIRECTORY_COPIE_PI = "static/Uploads/copie_pi"
+UPLOAD_DIRECTORY_LOGO_PME = "static/Uploads/logo_pme"
 
 # Verifier l'existence des dossiers
 os.makedirs(UPLOAD_DIRECTORY_COPIE_PI, exist_ok=True)
@@ -493,7 +493,7 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
 
 
 ######################################################################################################
-#                     Affichage des informations du clients                                          #
+#                    Authentification                                                                #
 ###################################################################################################### 
 @app.post('/login', tags=["Authentification"])
 def login_user(user_access: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
