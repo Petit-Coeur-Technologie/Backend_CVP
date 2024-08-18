@@ -20,7 +20,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-app.mount("/Uploads", StaticFiles(directory="static/Uploads"), name="uploads")
+app.mount("/static", StaticFiles(directory="static/Uploads"), name="uploads")
 # dossiers de destination pour les uploads
 UPLOAD_DIRECTORY_COPIE_PI = "static/Uploads/copie_pi"
 UPLOAD_DIRECTORY_LOGO_PME = "static/Uploads/logo_pme"
