@@ -513,7 +513,7 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
     
 
 @app.get('/clients/nom_ou_tel/{client_role}/{nom_prenom}/{nom_entreprise}/{tel}', response_model=Union[schemas.ClientOut, schemas.UtilisateurOut], tags=["Client"])
-def search_client(client_role: str, search_value: str, db: Session = Depends(get_db)):
+def search_client(client_role: str, search_value: Optional[str]=None, db: Session = Depends(get_db)):
     # Vérification du rôle du client
     if client_role not in ["menage", "entreprise"]:
         raise HTTPException(
@@ -524,11 +524,11 @@ def search_client(client_role: str, search_value: str, db: Session = Depends(get
     # Requête pour récupérer les informations de l'utilisateur
     if client_role == "menage":
         utilisateur = db.query(Utilisateur).filter(
-            or_(Utilisateur.nom_prenom.contains(search_value), Utilisateur.tel.contains(search_value))
+            or_(Utilisateur.nom_prenom.contains(search_value), Utilisateur.tel.contains(search_value), Utilisateur.email.contains(search_value))
         ).first()
     elif client_role == "entreprise":
         client = db.query(Client).join(Utilisateur).filter(
-            or_(Client.nom_entreprise.contains(search_value), Utilisateur.tel.contains(search_value))
+            or_(Client.nom_entreprise.contains(search_value), Utilisateur.tel.contains(search_value), Utilisateur.email.contains(search_value), Utilisateur.nom_prenom.contains(search_value))
         ).first()
         
         if client:
@@ -638,13 +638,7 @@ async def create_abonnement(
 
     return new_abonnement
 
-@app.get("/pmes/{pme_id}/clients", response_model=List[Union[schemas.ClientOut, schemas.UtilisateurOut]])
-def read_clients_by_pme(pme_id: int, db: Session = Depends(get_db)):
-    abonnements = db.query(Abonnement).join(Client, Abonnement.client_id==Client.id).filter(Abonnement.pme_id == pme_id).all()
-    if not abonnements:
-        raise HTTPException(status_code=404, detail="Aucun abonnement trouvé pour cette PME")
-    
-    return abonnements
+
 
 
 
