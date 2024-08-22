@@ -11,7 +11,7 @@ from schemas import TokenData, UtilisateurOut
 from database import get_db
 from models import Utilisateur
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY","default-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -46,11 +46,11 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db : S
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("user_id")
+        user_id: int = payload.get("user_id")
         role: str = payload.get("role")
         if user_id is None or role is None:
             raise credentials_exception
-        token_data = TokenData(user_id=user_id, role=role)
+        token_data = TokenData(user_id=str(user_id), role=role)
     except InvalidTokenError:
         raise credentials_exception
     user = db.query(Utilisateur).filter(Utilisateur.id==token_data.user_id).first()

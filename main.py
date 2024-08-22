@@ -6,13 +6,16 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, sta
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List
 from models import *
+from jwt import InvalidTokenError
 from database import engine, get_db, Base
 import schemas
 from utils import hash_password, verify_password, create_access_token, role_required
+from schemas import ClientOut
 
 
 Base.metadata.create_all(bind=engine)
@@ -20,12 +23,13 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 # dossiers de destination pour les uploads
-UPLOAD_DIRECTORY_COPIE_PI = "Uploads/copie_pi"
-UPLOAD_DIRECTORY_LOGO_PME = "Uploads/logo_pme"
+UPLOAD_DIRECTORY_COPIE_PI = "static/uploads/copie_pi"
+UPLOAD_DIRECTORY_LOGO_PME = "static/uploads/logo_pme"
 
 # Verifier l'existence des dossiers
 os.makedirs(UPLOAD_DIRECTORY_COPIE_PI, exist_ok=True)
 os.makedirs(UPLOAD_DIRECTORY_LOGO_PME, exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,7 +39,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+def get_clients_by_pme(db: Session, pme_id: int):
+    return db.query(Client).join(Abonnement).filter(Abonnement.pme_id == pme_id).all()
 
 @app.get('/')
 def index_root():
@@ -147,6 +152,10 @@ async def register_pme(
     with open(logo_pme_file_path, "wb") as buffer:
         buffer.write(await logo_pme.read())
 
+
+    copie_pi_url = f"/static/uploads/copie_pi/{copie_pi_file_name}"
+    logo_pme_url = f"/static/uploads/logo_pme/{logo_pme_file_name}"
+
     # Création de l'utilisateur
     db_utilisateur = Utilisateur(
         quartier_id=quartier_id,
@@ -155,7 +164,7 @@ async def register_pme(
         genre=genre,
         email=email,
         mot_de_passe=hashed_password,
-        copie_pi=copie_pi_file_name,
+        copie_pi=copie_pi_url,
         role="pme",
         create_at=create_at,
         is_actif=is_actif,
@@ -174,7 +183,7 @@ async def register_pme(
         num_enregistrement=num_enregistrement,
         tarif_mensuel=tarif_mensuel,
         tarif_abonnement=tarif_abonnement,
-        logo_pme=logo_pme_file_name,
+        logo_pme=logo_pme_url,
     )
     db.add(db_pme)
     db.commit()
@@ -246,7 +255,7 @@ def get_pmes(db : Session = Depends(get_db)):
 
     return pme_list
      
-@app.get('/pmes/{pme_id}', response_model=schemas.PmeOut, tags=['Pme'])
+@app.get('/pmes/id/{pme_id}', response_model=schemas.PmeOut, tags=['Pme'])
 def get_pme(pme_id: int, db: Session = Depends(get_db)):
     # Requête pour récupérer les données de la PME avec les informations utilisateur associées
     pme = db.query(Pme).outerjoin(Utilisateur).filter(Pme.id == pme_id).first()
@@ -281,6 +290,18 @@ def get_pme(pme_id: int, db: Session = Depends(get_db)):
     )
 
     return pme_data
+
+
+
+@app.get('/pmes/recherche', response_model=list[schemas.PmeOut], tags=['Pme'])
+def get_pme( search_value= Optional[str], db: Session = Depends(get_db)):
+    # Requête pour récupérer les données de la PME avec les informations utilisateur associées
+    pme = db.query(Pme).outerjoin(Utilisateur).filter(or_(Pme.nom_pme.contains(search_value), Utilisateur.nom_prenom.contains(search_value), Utilisateur.tel.contains(search_value), Utilisateur.email.contains(search_value))).all()
+    
+    if pme is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Le nom fourni ne correspond à aucune Pme")
+
+    return pme
 
 ######################################################################################################
 #            Creation de compte pour les roles "menage" et "entreprise"                              #
@@ -489,7 +510,72 @@ def get_client(client_role: str, client_id: int, db: Session = Depends(get_db)):
         )
     
 
+@app.get('/clients/nom_ou_tel/{client_role}/{nom_prenom}/{nom_entreprise}/{tel}', response_model=Union[schemas.ClientOut, schemas.UtilisateurOut], tags=["Client"])
+def search_client(client_role: str, search_value: str, db: Session = Depends(get_db)):
+    # Vérification du rôle du client
+    if client_role not in ["menage", "entreprise"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Vous ne pouvez rechercher que les informations concernant un client de type menage ou entreprise!"
+        )
 
+    # Requête pour récupérer les informations de l'utilisateur
+    if client_role == "menage":
+        utilisateur = db.query(Utilisateur).filter(
+            or_(Utilisateur.nom_prenom.contains(search_value), Utilisateur.tel.contains(search_value))
+        ).first()
+    elif client_role == "entreprise":
+        client = db.query(Client).join(Utilisateur).filter(
+            or_(Client.nom_entreprise.contains(search_value), Utilisateur.tel.contains(search_value))
+        ).first()
+        
+        if client:
+            utilisateur = client.utilisateur
+
+    # Si aucun utilisateur ou client n'est trouvé, lever une exception
+    if not utilisateur:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aucun client ne correspond à vos paramètres de recherches"
+        )
+
+    # Si le rôle est "entreprise", retourner les informations du client entreprise
+    if client_role == "entreprise" and client:
+        return schemas.ClientOut(
+            id=client.id,
+            utilisateur=schemas.UtilisateurOut(
+                id=utilisateur.id,
+                quartier_id=utilisateur.quartier_id,
+                nom_prenom=utilisateur.nom_prenom,
+                tel=utilisateur.tel,
+                genre=utilisateur.genre,
+                email=utilisateur.email,
+                copie_pi=utilisateur.copie_pi,
+                role=utilisateur.role,
+                create_at=utilisateur.create_at,
+                is_actif=utilisateur.is_actif,
+                update_at=utilisateur.update_at,
+            ),
+            num_rccm=client.num_rccm,
+            nom_entreprise=client.nom_entreprise
+        )
+
+    # Pour les rôles autres que "entreprise", retourner uniquement les informations utilisateur
+    return schemas.UtilisateurOut(
+            id=utilisateur.id,
+            quartier_id=utilisateur.quartier_id,
+            nom_prenom=utilisateur.nom_prenom,
+            tel=utilisateur.tel,
+            genre=utilisateur.genre,
+            email=utilisateur.email,
+            copie_pi=utilisateur.copie_pi,
+            role=utilisateur.role,
+            create_at=utilisateur.create_at,
+            is_actif=utilisateur.is_actif,
+            update_at=utilisateur.update_at,
+        )
+    
+    
 ######################################################################################################
 #                     Affichage des informations du clients                                          #
 ###################################################################################################### 
@@ -541,7 +627,7 @@ async def create_abonnement(
         tarif_abonnement=abonnement.tarif_abonnement,
         status_abonnement=abonnement.status_abonnement,
         debut_abonnement=abonnement.debut_abonnement,
-        fin_abonnement=abonnement.fin_abonnement
+        fin_abonnement=abonnement.fin_abonnement,
     )
 
     db.add(new_abonnement)
@@ -549,3 +635,15 @@ async def create_abonnement(
     db.refresh(new_abonnement)
 
     return new_abonnement
+
+@app.get("/pmes/{pme_id}/clients", response_model=List[Union[schemas.ClientOut, schemas.UtilisateurOut]])
+def read_clients_by_pme(pme_id: int, db: Session = Depends(get_db)):
+    abonnements = db.query(Abonnement).join(Client, Abonnement.client_id==Client.id).filter(Abonnement.pme_id == pme_id).all()
+    if not abonnements:
+        raise HTTPException(status_code=404, detail="Aucun abonnement trouvé pour cette PME")
+    
+    return abonnements
+
+
+
+

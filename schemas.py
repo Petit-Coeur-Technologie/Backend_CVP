@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 
 
 
@@ -129,16 +129,18 @@ class AbonnementBase(BaseModel):
     pme_id: int
     num_abonnement: str
     tarif_abonnement: int
-    status_abonnement: bool = True  # Par défaut à True
+    status_abonnement: str 
     debut_abonnement: datetime
-    fin_abonnement: datetime
+    fin_abonnement: Optional[date]
+   
 
 class AbonnementCreate(AbonnementBase):
     pass
 
 class AbonnementOut(AbonnementBase):
     id: int
+    status_abonnement: str
     utilisateurs_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True

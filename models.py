@@ -212,8 +212,6 @@ class Pme(Base):
         String,
         nullable=False
     )
-    
-    
     abonnements = relationship(
         "Abonnement",
         backref="pme"
@@ -246,6 +244,10 @@ class Client(Base):
         String,
         nullable=False,
         index=True
+    )
+    abonnements = relationship(
+        "Abonnement",
+        backref="clients"
     )
 
 
@@ -282,7 +284,7 @@ class Abonnement(Base):
         nullable=False
     )
     status_abonnement = Column(
-        Boolean,
+        String,
         nullable=False
     )
     debut_abonnement = Column(
@@ -293,7 +295,11 @@ class Abonnement(Base):
         DateTime,
         nullable=False
     )
-
+    client_id = Column(
+        Integer, 
+        ForeignKey('clients.id'))
+    
+   
 
 
 ##===============================================================##
