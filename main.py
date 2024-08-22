@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List
@@ -22,6 +23,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+app.mount("/static", StaticFiles(directory="static/Uploads"), name="uploads")
 # dossiers de destination pour les uploads
 UPLOAD_DIRECTORY_COPIE_PI = "static/uploads/copie_pi"
 UPLOAD_DIRECTORY_LOGO_PME = "static/uploads/logo_pme"
@@ -577,7 +579,7 @@ def search_client(client_role: str, search_value: str, db: Session = Depends(get
     
     
 ######################################################################################################
-#                     Affichage des informations du clients                                          #
+#                    Authentification                                                                #
 ###################################################################################################### 
 @app.post('/login', tags=["Authentification"])
 def login_user(user_access: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
