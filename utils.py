@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 import jwt
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
@@ -10,10 +11,22 @@ import os
 from schemas import TokenData, UtilisateurOut
 from database import get_db
 from models import Utilisateur
+import http.client
+import json
+import random
+
 
 SECRET_KEY = os.getenv("SECRET_KEY","default-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+NimbaACCOUNT_SID = os.getenv("NimbaACCOUNT_SID")
+NimbaAUTH_TOKEN = os.getenv("NimbaAUTH_TOKEN")
+NIMBA_SECRET_TOKEN = os.getenv("NIMBA_SECRET_TOKEN")
+NimbaPHONE_NUMBER = os.getenv("NimbaPHONE_NUMBER")
+
+conn = http.client.HTTPSConnection("api.nimbasms.com")
+
 
 # Configure passlib pour utiliser bcrypt pour le hachage des mots de passe
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -53,7 +66,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db : S
         token_data = TokenData(user_id=str(user_id), role=role)
     except InvalidTokenError:
         raise credentials_exception
-    user = db.query(Utilisateur).filter(Utilisateur.id==token_data.user_id).first()
+    user = db.query(Utilisateur).filter(and_(Utilisateur.id==token_data.user_id, Utilisateur.is_actif==True)).first()
     if user is None:
         raise credentials_exception
     return user
@@ -68,3 +81,33 @@ def role_required(roles: list[str]):
             )
         return current_user
     return role_verification
+
+
+def envoie_sms(num_phone: str, message:str):
+    conn = http.client.HTTPSConnection("api.nimbasms.com")
+
+
+    headers = {
+    "authorization": NimbaAUTH_TOKEN,
+    "content-type": "application/json"
+    } 
+    payload = {
+        "to": [num_phone],
+        "sender_name": "convipre",
+        "message": message
+    }
+
+    conn.request("POST", "/v1/messages", body=json.dumps(payload), headers=headers)
+
+    res = conn.getresponse()
+    data = res.read()
+
+    print(data.decode("utf-8"))
+
+def generate_otp():
+   
+     return str(random.randint(100000, 999999))
+
+
+
+

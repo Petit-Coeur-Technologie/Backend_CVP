@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime, date
 
 
@@ -18,7 +18,7 @@ class Commune(BaseModel):
     class Config:
         from_attributes = True
         
-class Quartier(BaseModel):
+class QuartierOut(BaseModel):
     id: int
     quartier : str
     
@@ -26,7 +26,7 @@ class Quartier(BaseModel):
         from_attributes = True
 
 
-class SingleQuartier(Quartier):
+class SingleQuartier(QuartierOut):
     ville_id: int
     
     class Config:
@@ -109,7 +109,7 @@ class PmeOut(BaseModel):
     
 class ClientOut(BaseModel):
     id: int
-    utilisateur: UtilisateurOut
+    utilisateur: UtilisateurOut                                                                       
     num_rccm: Optional[str] = None
     nom_entreprise: Optional[str] = None
 
@@ -145,3 +145,62 @@ class AbonnementOut(AbonnementBase):
     class Config:
         from_attributes = True
         from_attributes = True
+
+class AbonneeOut(BaseModel):
+    utilisateur : Union[UtilisateurOut, ClientOut]
+    status_abonnement: str
+    debut_abonnement: datetime
+
+class ma_pme_out(BaseModel):
+    pme: PmeOut
+
+
+class UpdatePme(BaseModel):
+    nom_pme: str
+    description: str
+    zone_intervention: str
+    tarif_mensuel: int
+    tarif_abonnement: int
+    logo_pme: str   
+
+class UpdatePassword(BaseModel):
+    old_password: str
+    new_password: str
+
+# les schema pour la mise à jour du Client
+class ClientUpdateBase(BaseModel):
+    quartier_id: Optional[int] = None
+    nom_prenom: Optional[str] = None
+    tel: Optional[str] = None
+    genre: Optional[str] = None
+    email: Optional[EmailStr] = None
+    copie_pi: Optional[str] = None
+    is_actif: Optional[bool] = None
+    num_rccm: Optional[str] = None
+    nom_entreprise: Optional[str] = None
+
+class EntrepriseClientUpdate(ClientUpdateBase):
+    num_rccm: Optional[str] = None
+    nom_entreprise: Optional[str] = None
+
+class MenageClientUpdate(ClientUpdateBase):
+    pass
+
+class CommentIn(BaseModel):
+    utilisateur_id: int
+    pme_id: int
+    message: str
+    note: Optional[int]
+    date_publicat: datetime
+
+class CommentOut(BaseModel):
+    message: str
+    note: Optional[int]
+    date_publicat: datetime
+
+class Commentshow(BaseModel):
+    message: str
+    auteur: int
+    note: Optional[int]
+    date_publicat: datetime
+

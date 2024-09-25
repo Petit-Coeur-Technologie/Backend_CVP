@@ -1,6 +1,7 @@
+from datetime import datetime
+from email import message
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime, Text
 from sqlalchemy.orm import relationship
-
 from database import Base
 
 
@@ -28,6 +29,7 @@ class Ville(Base):
         "Commune",
         backref="ville"
     )
+    __table_args__ = {'extend_existing': True}
 
 ############################
 #        Table Commune     #
@@ -49,7 +51,6 @@ class Commune(Base):
         String,
         nullable=False
     )
-    
     quartiers = relationship(
         "Quartier",
         backref="commune"
@@ -93,77 +94,27 @@ class Quartier(Base):
 
 class Utilisateur(Base):
     __tablename__ = "utilisateurs"
-    id = Column(
-        Integer,
-        primary_key=True,
-        nullable=False
-    )
-    quartier_id = Column(
-        Integer,
-        ForeignKey("quartiers.id"),
-        nullable=False
-    )
-    nom_prenom = Column(
-        String,
-        index=True,
-        nullable=False
-    )
-    tel = Column(
-        String,
-        unique=True,
-        nullable=False
-    )
-    genre = Column(
-        String,
-        nullable=False
-    )
-    email = Column(
-        String,
-        unique=True,
-        nullable=False
-    )
-    mot_de_passe = Column(
-        String,
-        nullable=False
-    )
-    copie_pi = Column(
-        String,
-        nullable=False
-    )
-    role = Column(
-        String,
-        nullable=False
-    )
-    create_at = Column(
-        DateTime,
-        nullable=False
-    )
-    is_actif = Column(
-        Boolean,
-        nullable=False
-    )
-    update_at = Column(
-        DateTime,
-        nullable=False
-    )
+    id = Column(Integer,primary_key=True,nullable=False)
+    quartier_id = Column(Integer,ForeignKey("quartiers.id"),nullable=False)
+    nom_prenom = Column(String,index=True,nullable=False)
+    tel = Column(String,unique=True,nullable=False)
+    genre = Column(String,nullable=False)
+    email = Column(String,unique=True,nullable=False)
+    mot_de_passe = Column(String,nullable=False)
+    copie_pi = Column(String, nullable=False)
+    role = Column(String,nullable=False)
+    create_at = Column(DateTime,nullable=False)
+    is_actif = Column(Boolean,nullable=False,server_default="FALSE")
+    update_at = Column(DateTime,nullable=False)
     
-    pmes = relationship(
-        "Pme",
-        backref="utilisateur"
-    )
+    pmes = relationship( "Pme",backref="utilisateur")
+    otp = relationship("OTP",backref="utilisateur")
     
-    clients = relationship(
-        "Client",
-        backref="utilisateur"
-    )
-    abonnements = relationship(
-        "Abonnement",
-        backref="utilisateur"
-    )
-    confcalrondes = relationship(
-        "ConfCalRonde",
-        backref="utilisateur"
-    )
+    clients = relationship("Client",backref="utilisateur")
+    abonnements = relationship("Abonnement",backref="utilisateur")
+    confcalrondes = relationship( "ConfCalRonde",backref="utilisateur")
+    
+   
     
 ##############################
 #        Table PME           #
@@ -171,55 +122,18 @@ class Utilisateur(Base):
 class Pme(Base):
     __tablename__ = "pmes"
     
-    id = Column(
-        Integer,
-        primary_key=True,
-        nullable=False
-    )
-    utilisateur_id = Column(
-        Integer,
-        ForeignKey("utilisateurs.id"),
-        nullable=False
-    )
-    nom_pme = Column(
-        String,
-        nullable=False,
-        index=True,
-        unique=True
-    )
-    description = Column(
-        Text,
-        nullable=False
-    )
-    zone_intervention = Column(
-        String,
-        nullable=False
-    )
-    num_enregistrement = Column(
-        String,
-        nullable=False,
-        unique=True
-    )
-    tarif_mensuel = Column(
-        Integer,
-        nullable=False
-    )
-    tarif_abonnement = Column(
-        Integer,
-        nullable=False
-    )
-    logo_pme = Column(
-        String,
-        nullable=False
-    )
-    abonnements = relationship(
-        "Abonnement",
-        backref="pme"
-    )
-    calrondes = relationship(
-        "CalRonde",
-        backref="pme"
-    )
+    id = Column(Integer,primary_key=True,nullable=False)
+    utilisateur_id = Column(Integer,ForeignKey("utilisateurs.id"),nullable=False)
+    nom_pme = Column(String,nullable=False,index=True,unique=True)
+    description = Column(Text,nullable=False)
+    zone_intervention = Column(String,nullable=False)
+    num_enregistrement = Column(String,nullable=False,unique=True)
+    tarif_mensuel = Column(Integer,nullable=False)
+    tarif_abonnement = Column(Integer,nullable=False)
+    logo_pme = Column(String,nullable=False)
+    abonnements = relationship("Abonnement",backref="pme")
+    calrondes = relationship("CalRonde",backref="pme")
+   
 
 ##############################
 #        Table Client        #
@@ -245,11 +159,7 @@ class Client(Base):
         nullable=False,
         index=True
     )
-    abonnements = relationship(
-        "Abonnement",
-        backref="clients"
-    )
-
+   
 
 
 ##===============================================================##
@@ -295,10 +205,7 @@ class Abonnement(Base):
         DateTime,
         nullable=False
     )
-    client_id = Column(
-        Integer, 
-        ForeignKey('clients.id'))
-    
+   
    
 
 
@@ -368,5 +275,59 @@ class ConfCalRonde(Base):
     )
     date_conf_passage = Column(
         DateTime,
+        nullable=False
+    )
+class OTP(Base):
+    __tablename__ = "otps"
+    id=Column(
+        Integer,
+        primary_key=True
+    )
+    otp_code= Column(
+        String, 
+        nullable=False
+    )
+    expiration_time=Column(
+        DateTime,
+        nullable=False
+    )
+    utilisateur_id = Column(
+        Integer,
+        ForeignKey("utilisateurs.id"),
+        nullable=False
+    )
+
+class Commentaire(Base):
+    __tablename__ = 'commentaire'
+
+    id = Column(
+        Integer, 
+        primary_key=True,
+        nullable=False
+    )
+    utilisateur_id = Column(
+        Integer,
+        ForeignKey("utilisateurs.id"),
+        nullable=False
+    )
+    pme_id = Column(
+        Integer,
+        ForeignKey("pmes.id"),
+        nullable=False
+    )
+    message = Column(
+        String,
+        nullable=False
+    )
+    note = Column(
+        Integer,
+        nullable=False
+    )
+    date_publicat = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+    auteur = Column(
+        Integer,
         nullable=False
     )
