@@ -7,7 +7,7 @@ from schemas import *
 from utils import *
 
 router = APIRouter(
-    prefix="/calendrier",
+    prefix="/CalRonde",
     tags=["CalRonde"]
 )
 

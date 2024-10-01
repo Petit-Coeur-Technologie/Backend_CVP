@@ -14,7 +14,7 @@ from routers.Viles import router as viles_router
 from routers.Clients import router as client_router
 from routers.Communes import router as commune_router
 from routers.Quartiers import router as quartier_router
-from routers.Calendrier import router as calendrier_router
+from routers.CalRonde import router as calendrier_router
 from config import UPLOAD_DIRECTORY_COPIE_PI, UPLOAD_DIRECTORY_LOGO_PME 
 
 
