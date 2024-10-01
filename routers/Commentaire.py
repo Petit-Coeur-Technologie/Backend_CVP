@@ -18,17 +18,19 @@ def ajouter_commentaire(commentaire: CommentIn,
                         current_user: UtilisateurOut = Depends(role_required(["menage", "entreprise", "pme"])),
                         db: Session = Depends(get_db)):
 
-    # Récupérer la PME associée à l'utilisateur s'il s'agit d'une PME
+   
+         # Récupérer la PME associée à l'utilisateur s'il s'agit d'une PME
     pme_associee = db.query(Pme).filter(Pme.utilisateur_id == current_user.id).first()
 
     if current_user.role == "pme":
-        # Vérifier si la PME essaie de commenter elle-même (utilisateur_id = celui de la PME)
+       
+         # Vérifier si la PME essaie de commenter elle-même (utilisateur_id = celui de la PME)
         if commentaire.utilisateur_id == current_user.id:
             raise HTTPException(status_code=403, detail="Une PME ne peut pas se commenter elle-même.")
         
         # Vérifier si la PME commente sur un utilisateur (ménage ou entreprise) abonné à elle
         abonnement = db.query(Abonnement).filter(
-            Abonnement.utilisateurs_id == commentaire.utilisateur_id,
+            Abonnement.utilisateur_id == commentaire.utilisateur_id,
             Abonnement.pme_id == pme_associee.id
         ).first()
 
@@ -39,7 +41,7 @@ def ajouter_commentaire(commentaire: CommentIn,
         # Si l'utilisateur est un ménage ou une entreprise
         # Vérifier s'il est abonné à la PME qu'il souhaite commenter
         abonnement = db.query(Abonnement).filter(
-            Abonnement.utilisateurs_id == current_user.id,
+            Abonnement.utilisateur_id == current_user.id,
             Abonnement.pme_id == commentaire.pme_id
         ).first()
         

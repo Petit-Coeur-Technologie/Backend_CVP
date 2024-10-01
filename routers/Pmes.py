@@ -3,7 +3,7 @@ from fastapi import Depends, HTTPException, UploadFile, File, Form, status, APIR
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List
-from con_vi_propre_api.main import UPLOAD_DIRECTORY_COPIE_PI, UPLOAD_DIRECTORY_LOGO_PME
+from config import UPLOAD_DIRECTORY_COPIE_PI, UPLOAD_DIRECTORY_LOGO_PME
 from models import *
 from database import get_db
 from schemas import *
@@ -248,12 +248,13 @@ def get_pme( search_value= Optional[str], db: Session = Depends(get_db)):
 @router.put("/pmes/{pme_id}", response_model=UpdatePme, tags=["Pme"])
 async def update_pme(pme_id: int, pme: UpdatePme, db: Session = Depends(get_db)):
     # Récupérer la PME existante de la base de données
-    db_pme = db.query(Pme).filter(Pme.id == pme_id).first()
+    db_pme = db.query(Pme).outerjoin(Utilisateur).filter(Pme.id == pme_id).first()
     
     if not db_pme:
         raise HTTPException(status_code=404, detail="PME non trouvée")
 
     # Mise à jour des champs de la PME
+    db_pme.utilisateur_id = pme.utilisateur_id
     db_pme.nom_pme = pme.nom_pme
     db_pme.description = pme.description
     db_pme.zone_intervention = pme.zone_intervention

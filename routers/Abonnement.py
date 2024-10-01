@@ -14,6 +14,33 @@ router = APIRouter(
 
 
 
+@router.get("/{abonnement_id}/valider", tags=["Abonnement"])
+async def valider_abonnement(
+    abonnement_id: int,
+    db: Session = Depends(get_db),
+):
+    abonnement = db.query(Abonnement).filter(Abonnement.id == abonnement_id).first()
+    if not abonnement:
+        raise HTTPException(status_code=404, detail="Abonnement non trouvé")
+    
+    abonnement.status_abonnement = "Validé"
+    db.commit()
+    return {"message": "Abonnement validé avec succès"}
+
+
+@router.get("/{abonnement_id}/rejeter", tags=["Abonnement"])
+async def rejeter_abonnement(
+    abonnement_id: int,
+    db: Session = Depends(get_db),
+):
+    abonnement = db.query(Abonnement).filter(Abonnement.id == abonnement_id).first()
+    if not abonnement:
+        raise HTTPException(status_code=404, detail="Abonnement non trouvé")
+    
+    abonnement.status_abonnement = "Rejeté"
+    db.commit()
+    return {"message": "Abonnement rejeté"}
+
 ######################################################################################################
 #                     creation d'un abonnement                                                       #
 ######################################################################################################
@@ -67,8 +94,29 @@ async def create_abonnement(
     )
 
     if pme:
+        #envoie sms
         message = f"Salut! nouvelle demande d'abonnement de {current_user.nom_prenom} en tant que {current_user.role} au numero d'abonnement{new_abonnement.num_abonnement}. Veuillez valider svp!."
         envoie_sms(pme.utilisateur.tel, message)
+        
+        #envoie email
+        # base_url = "https://ton-domaine.com"  # Remplace par le domaine de ton application
+        # validate_link = f"{base_url}/abonnement/{new_abonnement.id}/valider"
+        # reject_link = f"{base_url}/abonnement/{new_abonnement.id}/rejeter"
+
+        # subject = "Nouvelle demande d'abonnement"
+        # body = f"""
+        # Salut!
+
+        # Vous avez une nouvelle demande d'abonnement de {current_user.nom_prenom}. 
+
+        # Veuillez valider ou rejeter la demande en cliquant sur les liens ci-dessous :
+
+        # - [Valider l'abonnement]({validate_link})
+        # - [Rejeter l'abonnement]({reject_link})
+
+        # Merci!
+        # """
+        # send_email(subject, pme.utilisateur.email, body)
 
     db.add(new_abonnement)
     db.commit()
@@ -194,7 +242,7 @@ async def get_abonnements_by_pme(
 
 @router.put("/{abonnement_id}/{confirmation_message}", tags=["Abonnement"])
 def update_abonnement_status(
-    abonnement_id: int, 
+    abonnement_id: int,                     
     confirmation_message: str,
     current_user: UtilisateurOut = Depends(role_required(["pme"])),
     db: Session = Depends(get_db)

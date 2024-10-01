@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, UploadFile, File, Form, status, APIRouter
-from con_vi_propre_api.main import UPLOAD_DIRECTORY_COPIE_PI
+from config import UPLOAD_DIRECTORY_COPIE_PI, UPLOAD_DIRECTORY_LOGO_PME 
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List

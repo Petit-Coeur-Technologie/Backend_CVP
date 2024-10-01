@@ -1,4 +1,7 @@
 from datetime import datetime, timedelta, timezone
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -14,6 +17,11 @@ from models import Utilisateur
 import http.client
 import json
 import random
+from dotenv import load_dotenv
+
+
+
+load_dotenv()
 
 
 SECRET_KEY = os.getenv("SECRET_KEY","default-secret-key")
@@ -26,12 +34,16 @@ NIMBA_SECRET_TOKEN = os.getenv("NIMBA_SECRET_TOKEN")
 NimbaPHONE_NUMBER = os.getenv("NimbaPHONE_NUMBER")
 
 conn = http.client.HTTPSConnection("api.nimbasms.com")
+SMTP_SERVER = os.getenv("SMTP_SERVER")
+SMTP_PORT = int(os.getenv("SMTP_PORT"))
+SMTP_EMAIL = os.getenv("SMTP_EMAIL")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 
 
 # Configure passlib pour utiliser bcrypt pour le hachage des mots de passe
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="Authentification/login")
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -83,7 +95,7 @@ def role_required(roles: list[str]):
     return role_verification
 
 
-def envoie_sms(num_phone: str, message:str):
+def envoie_sms(num_phone: str, message: str):
     conn = http.client.HTTPSConnection("api.nimbasms.com")
 
 
@@ -108,6 +120,31 @@ def generate_otp():
    
      return str(random.randint(100000, 999999))
 
+# Fonction d'envoi d'email avec Hostinger
+def send_email(subject, recipient, body):
+    # Configurations SMTP de Hostinger
+    smtp_server = "smtp.hostinger.com"
+    smtp_port = 587  
+    smtp_username = "ton-email@ton-domaine.com"
+    smtp_password = "ton-mot-de-passe"
 
+    # Création du message
+    msg = MIMEMultipart()
+    msg['From'] = smtp_username
+    msg['To'] = recipient
+    msg['Subject'] = subject
 
+    # Corps du mail
+    msg.attach(MIMEText(body, 'plain'))
+
+    # Connexion au serveur SMTP et envoi du mail
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()  # Démarre le chiffrement TLS
+        server.login(smtp_username, smtp_password)
+        server.sendmail(smtp_username, recipient, msg.as_string())
+        server.quit()
+        print("Email envoyé avec succès!")
+    except Exception as e:
+        print(f"Erreur lors de l'envoi du mail: {str(e)}")
 

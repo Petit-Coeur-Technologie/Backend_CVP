@@ -1,3 +1,4 @@
+from typing import List
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, Union
 from datetime import datetime, date
@@ -144,7 +145,7 @@ class AbonnementOut(AbonnementBase):
 
     class Config:
         from_attributes = True
-        from_attributes = True
+       
 
 class AbonneeOut(BaseModel):
     utilisateur : Union[UtilisateurOut, ClientOut]
@@ -203,4 +204,31 @@ class Commentshow(BaseModel):
     auteur: int
     note: Optional[int]
     date_publicat: datetime
+
+class calRonde(BaseModel):
+    id: int
+    Utilisateur_id: int
+    pme_id: int
+    jour_passage: str
+    heure_passage: str
+    date_creation: datetime
+    date_maj: datetime
+    
+class CalRondeIn(BaseModel):
+    pme_id: int
+    jour_passage: str 
+    heure_passage: str
+
+    class Config:
+        from_attributes = True
+
+
+class CalRondeOut(BaseModel):
+    jour_passage: str
+    heure_passage: str
+
+    class Config:
+        from_attributes = True
+
+
 

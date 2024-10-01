@@ -113,7 +113,8 @@ class Utilisateur(Base):
     clients = relationship("Client",backref="utilisateur")
     abonnements = relationship("Abonnement",backref="utilisateur")
     confcalrondes = relationship( "ConfCalRonde",backref="utilisateur")
-    
+    commentaire = relationship("Commentaire",backref="utilisateur")
+    calrondes = relationship("CalRonde",backref="utilisateur")
    
     
 ##############################
@@ -133,6 +134,7 @@ class Pme(Base):
     logo_pme = Column(String,nullable=False)
     abonnements = relationship("Abonnement",backref="pme")
     calrondes = relationship("CalRonde",backref="pme")
+    commentaire = relationship("Commentaire",backref="pme")
    
 
 ##############################
@@ -177,7 +179,7 @@ class Abonnement(Base):
         primary_key=True,
         nullable=False
     )
-    utilisateurs_id = Column(
+    utilisateur_id = Column(
         Integer,
         ForeignKey("utilisateurs.id")
     )
@@ -243,7 +245,11 @@ class CalRonde(Base):
     date_maj = Column(
         DateTime
     )
-    
+
+    utilisateur_id = Column(
+        Integer,
+        ForeignKey("utilisateurs.id")
+    )
     confcalrondes = relationship(
         "ConfCalRonde",
         backref="calronde"
